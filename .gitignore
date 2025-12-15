@@ -1,1 +1,5 @@
 awscliv2/
+.env
+node_modules/
+package-lock.json
+dbdata/

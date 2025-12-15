@@ -23,8 +23,21 @@ for table in tables:
         "TableName": name,
         "AttributeDefinitions": table["attributeDefinitions"],
         "KeySchema": table["keySchema"],
-        "BillingMode": table["billingMode"]
     }
+
+    # Adiciona BillingMode ou ProvisionedThroughput
+    if "billingMode" in table:
+        params["BillingMode"] = table["billingMode"]
+    elif "provisionedThroughput" in table:
+        params["ProvisionedThroughput"] = table["provisionedThroughput"]
+
+    # Adiciona GlobalSecondaryIndexes se existir
+    if "globalSecondaryIndexes" in table:
+        params["GlobalSecondaryIndexes"] = table["globalSecondaryIndexes"]
+
+    # Adiciona LocalSecondaryIndexes se existir
+    if "localSecondaryIndexes" in table:
+        params["LocalSecondaryIndexes"] = table["localSecondaryIndexes"]
 
     try:
         dynamodb.create_table(**params)

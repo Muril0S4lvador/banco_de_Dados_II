@@ -8,14 +8,14 @@ services:
         user: root
         working_dir: /home/dynamodblocal
         environment:
-            AWS_ACCESS_KEY_ID: local
-            AWS_SECRET_ACCESS_KEY: local
-            AWS_DEFAULT_REGION: "us-west-2"
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+            AWS_DEFAULT_REGION: ${AWS_REGION}
             AWS_PAGER: ""
         volumes:
             - ./dbdata:/home/dynamodblocal/data
         ports:
-        - "8000:8000"
+            - "8000:8000"
         entrypoint: ["/bin/sh", "-c"]
         command: >
             "java -jar DynamoDBLocal.jar -sharedDb -dbPath ./data &
@@ -23,21 +23,60 @@ services:
             python3 ./scripts_tables/create_tables.py &&
             python3 ./scripts_tables/populate_tables.py &&
             wait"
+        networks:
+            - database-connect
 
     dynamodb-admin:
         image: aaronshaf/dynamodb-admin
         container_name: dynamodb-admin
         environment:
             DYNAMO_ENDPOINT: "http://dynamodb-local:8000"
-            AWS_REGION: "us-west-2"
-            AWS_ACCESS_KEY_ID: local
-            AWS_SECRET_ACCESS_KEY: local
-            AWS_DEFAULT_REGION: "us-west-2"
+            AWS_REGION: ${AWS_REGION}
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+            AWS_DEFAULT_REGION: ${AWS_REGION}
             AWS_PAGER: ""
         depends_on:
             - dynamodb-local
         ports:
             - "8001:8001"
+        networks:
+            - database-connect
+
+    database-api:
+        container_name: database-api
+        image: database-api
+        mem_reservation: 350M  # Mínimo operacional
+        deploy:
+            resources:
+                limits:
+                    cpus: '1.0'   # Limita a um core de CPU
+                    memory: 650M  # Limita a 650Mb de RAM
+        ports:
+            - "${SERVER_PORT}:${SERVER_PORT}"
+        build:
+            context: .
+            dockerfile: Dockerfile.api
+        volumes:
+            - .:/app
+            - /app/node_modules
+        depends_on:
+            - dynamodb-local
+        environment:
+            SERVER_PORT: ${SERVER_PORT}
+            AWS_REGION: ${AWS_REGION}
+            AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+            AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
+            DYNAMODB_ENDPOINT: ${DYNAMODB_ENDPOINT}
+            AWS_PAGER: ""
+            JWT_SECRET: ${JWT_SECRET}
+        command: ${COMMAND}
+        networks:
+            - database-connect
+
+networks:
+    database-connect:
+        driver: bridge
 
 volumes:
     dbdata:

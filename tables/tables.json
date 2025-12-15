@@ -1,65 +1,313 @@
 [
   {
-    "name": "branch",
+    "name": "Users",
     "attributeDefinitions": [
-      { "AttributeName": "branch_name", "AttributeType": "S" }
+      {
+        "AttributeName": "userId",
+        "AttributeType": "S"
+      },
+      {
+        "AttributeName": "username",
+        "AttributeType": "S"
+      }
     ],
     "keySchema": [
-      { "AttributeName": "branch_name", "KeyType": "HASH" }
+      {
+        "AttributeName": "userId",
+        "KeyType": "HASH"
+      }
+    ],
+    "globalSecondaryIndexes": [
+      {
+        "IndexName": "UsernameIndex",
+        "KeySchema": [
+          {
+            "AttributeName": "username",
+            "KeyType": "HASH"
+          }
+        ],
+        "Projection": {
+          "ProjectionType": "ALL"
+        },
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
+      }
+    ],
+    "provisionedThroughput": {
+      "ReadCapacityUnits": 5,
+      "WriteCapacityUnits": 5
+    }
+  },
+  {
+    "name": "Tokens",
+    "attributeDefinitions": [
+      {
+        "AttributeName": "userId",
+        "AttributeType": "S"
+      },
+      {
+        "AttributeName": "token",
+        "AttributeType": "S"
+      }
+    ],
+    "keySchema": [
+      {
+        "AttributeName": "userId",
+        "KeyType": "HASH"
+      },
+      {
+        "AttributeName": "token",
+        "KeyType": "RANGE"
+      }
+    ],
+    "globalSecondaryIndexes": [
+      {
+        "IndexName": "TokenIndex",
+        "KeySchema": [
+          {
+            "AttributeName": "token",
+            "KeyType": "HASH"
+          }
+        ],
+        "Projection": {
+          "ProjectionType": "ALL"
+        },
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
+      }
+    ],
+    "provisionedThroughput": {
+      "ReadCapacityUnits": 5,
+      "WriteCapacityUnits": 5
+    }
+  },
+  {
+    "name": "Roles",
+    "attributeDefinitions": [
+      {
+        "AttributeName": "roleId",
+        "AttributeType": "S"
+      },
+      {
+        "AttributeName": "name",
+        "AttributeType": "S"
+      }
+    ],
+    "keySchema": [
+      {
+        "AttributeName": "roleId",
+        "KeyType": "HASH"
+      }
+    ],
+    "globalSecondaryIndexes": [
+      {
+        "IndexName": "RoleNameIndex",
+        "KeySchema": [
+          {
+            "AttributeName": "name",
+            "KeyType": "HASH"
+          }
+        ],
+        "Projection": {
+          "ProjectionType": "ALL"
+        },
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
+      }
+    ],
+    "provisionedThroughput": {
+      "ReadCapacityUnits": 5,
+      "WriteCapacityUnits": 5
+    }
+  },
+  {
+    "name": "Permissions",
+    "attributeDefinitions": [
+      {
+        "AttributeName": "permissionId",
+        "AttributeType": "S"
+      },
+      {
+        "AttributeName": "roleId",
+        "AttributeType": "S"
+      },
+      {
+        "AttributeName": "userId",
+        "AttributeType": "S"
+      },
+      {
+        "AttributeName": "tableName",
+        "AttributeType": "S"
+      }
+    ],
+    "keySchema": [
+      {
+        "AttributeName": "permissionId",
+        "KeyType": "HASH"
+      }
+    ],
+    "globalSecondaryIndexes": [
+      {
+        "IndexName": "RolePermissionsIndex",
+        "KeySchema": [
+          {
+            "AttributeName": "roleId",
+            "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "tableName",
+            "KeyType": "RANGE"
+          }
+        ],
+        "Projection": {
+          "ProjectionType": "ALL"
+        },
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
+      },
+      {
+        "IndexName": "UserPermissionsIndex",
+        "KeySchema": [
+          {
+            "AttributeName": "userId",
+            "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "tableName",
+            "KeyType": "RANGE"
+          }
+        ],
+        "Projection": {
+          "ProjectionType": "ALL"
+        },
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 5,
+          "WriteCapacityUnits": 5
+        }
+      }
+    ],
+    "provisionedThroughput": {
+      "ReadCapacityUnits": 5,
+      "WriteCapacityUnits": 5
+    }
+  },
+  {
+    "name": "branch",
+    "attributeDefinitions": [
+      {
+        "AttributeName": "branch_name",
+        "AttributeType": "S"
+      }
+    ],
+    "keySchema": [
+      {
+        "AttributeName": "branch_name",
+        "KeyType": "HASH"
+      }
     ],
     "billingMode": "PAY_PER_REQUEST"
   },
   {
     "name": "customer",
     "attributeDefinitions": [
-      { "AttributeName": "customer_name", "AttributeType": "S" }
+      {
+        "AttributeName": "customer_name",
+        "AttributeType": "S"
+      }
     ],
     "keySchema": [
-      { "AttributeName": "customer_name", "KeyType": "HASH" }
+      {
+        "AttributeName": "customer_name",
+        "KeyType": "HASH"
+      }
     ],
     "billingMode": "PAY_PER_REQUEST"
   },
   {
     "name": "account",
     "attributeDefinitions": [
-      { "AttributeName": "account_number", "AttributeType": "S" }
+      {
+        "AttributeName": "account_number",
+        "AttributeType": "S"
+      }
     ],
     "keySchema": [
-      { "AttributeName": "account_number", "KeyType": "HASH" }
+      {
+        "AttributeName": "account_number",
+        "KeyType": "HASH"
+      }
     ],
     "billingMode": "PAY_PER_REQUEST"
   },
   {
     "name": "loan",
     "attributeDefinitions": [
-      { "AttributeName": "loan_number", "AttributeType": "S" }
+      {
+        "AttributeName": "loan_number",
+        "AttributeType": "S"
+      }
     ],
     "keySchema": [
-      { "AttributeName": "loan_number", "KeyType": "HASH" }
+      {
+        "AttributeName": "loan_number",
+        "KeyType": "HASH"
+      }
     ],
     "billingMode": "PAY_PER_REQUEST"
   },
   {
     "name": "borrower",
     "attributeDefinitions": [
-      { "AttributeName": "customer_name", "AttributeType": "S" },
-      { "AttributeName": "loan_number", "AttributeType": "S" }
+      {
+        "AttributeName": "customer_name",
+        "AttributeType": "S"
+      },
+      {
+        "AttributeName": "loan_number",
+        "AttributeType": "S"
+      }
     ],
     "keySchema": [
-      { "AttributeName": "customer_name", "KeyType": "HASH" },
-      { "AttributeName": "loan_number", "KeyType": "RANGE" }
+      {
+        "AttributeName": "customer_name",
+        "KeyType": "HASH"
+      },
+      {
+        "AttributeName": "loan_number",
+        "KeyType": "RANGE"
+      }
     ],
     "billingMode": "PAY_PER_REQUEST"
   },
   {
     "name": "depositor",
     "attributeDefinitions": [
-      { "AttributeName": "customer_name", "AttributeType": "S" },
-      { "AttributeName": "account_number", "AttributeType": "S" }
+      {
+        "AttributeName": "customer_name",
+        "AttributeType": "S"
+      },
+      {
+        "AttributeName": "account_number",
+        "AttributeType": "S"
+      }
     ],
     "keySchema": [
-      { "AttributeName": "customer_name", "KeyType": "HASH" },
-      { "AttributeName": "account_number", "KeyType": "RANGE" }
+      {
+        "AttributeName": "customer_name",
+        "KeyType": "HASH"
+      },
+      {
+        "AttributeName": "account_number",
+        "KeyType": "RANGE"
+      }
     ],
     "billingMode": "PAY_PER_REQUEST"
   }

@@ -1,0 +1,26 @@
+Roles - Permissions (Admin View)
+- View
+- Insert
+- Select
+- Delete
+- tableName
+
++ CreateRole
++ SelectRoles
++ EditRole
++ DeleteRole
+
+User
+- User
+- Role
+
++ CreateUser
++ getUser
++ getUsers
++ DeleteUser
+
+<!--------------------------------------------------------------->
+
+User view
++ Get tables
++ Post Query

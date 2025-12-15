@@ -1,6 +1,7 @@
 import json
 import boto3
 from botocore.exceptions import ClientError
+import hashlib
 
 DATA_PATH = "./tables/"  # ajuste para o path no container
 DATA_FILE = [
@@ -10,6 +11,7 @@ DATA_FILE = [
     f"{DATA_PATH}/customer_batch.json",
     f"{DATA_PATH}/depositor_batch.json",
     f"{DATA_PATH}/loan_batch.json",
+    f"{DATA_PATH}/user_batch.json",
 ]
 
 dynamodb = boto3.client(
