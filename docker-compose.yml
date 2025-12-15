@@ -54,16 +54,20 @@ services:
                     memory: 650M  # Limita a 650Mb de RAM
         ports:
             - "${SERVER_PORT}:${SERVER_PORT}"
+            - "${CLIENT_PORT}:${CLIENT_PORT}"
         build:
             context: .
             dockerfile: Dockerfile.api
         volumes:
             - .:/app
-            - /app/node_modules
+            - /app/api/node_modules
+            - /app/frontend/node_modules
+            - /app/frontend/dist
         depends_on:
             - dynamodb-local
         environment:
             SERVER_PORT: ${SERVER_PORT}
+            CLIENT_PORT: ${CLIENT_PORT}
             AWS_REGION: ${AWS_REGION}
             AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
             AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}

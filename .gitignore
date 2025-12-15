@@ -3,3 +3,7 @@ awscliv2/
 node_modules/
 package-lock.json
 dbdata/
+frontend/dist/
+frontend/node_modules/
+api/dist/
+api/node_modules/
