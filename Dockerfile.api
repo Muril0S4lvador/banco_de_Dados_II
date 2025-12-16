@@ -22,20 +22,40 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-# Copiar arquivos de dependências
-COPY package*.json ./
+# Copiar arquivos de dependências da API
+COPY api/package*.json ./api/
 
-# Instalar dependências
+# Instalar dependências da API
+WORKDIR /app/api
 RUN npm install
 
-# Copiar código fonte
-COPY . .
+# Copiar código fonte da API
+COPY api/ ./
 
-# Compilar TypeScript
+# Compilar TypeScript da API
 RUN npm run build
 
-# Expor porta
-EXPOSE 4444
+# Instalar dependências do frontend
+WORKDIR /app/frontend
+COPY frontend/package*.json ./
+RUN npm install
 
-# Comando padrão
-CMD ["npm", "dev"]
+# Copiar código do frontend e buildar
+COPY frontend/ ./
+RUN npm run build
+
+# Instalar serve globalmente
+RUN npm install -g serve
+
+# Voltar para o diretório raiz
+WORKDIR /app
+
+# Copiar script de inicialização
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh
+
+# Expor portas (API e Frontend)
+EXPOSE 4444 3000
+
+# Comando padrão - usar o script de inicialização
+CMD ["/bin/sh", "/app/start.sh"]
