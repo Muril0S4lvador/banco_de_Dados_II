@@ -7,9 +7,11 @@ import Profile from './components/Profile'
 import Settings from './components/Settings'
 import Roles from './components/Roles'
 import Users from './components/Users'
+import Table from './components/Table'
+import TableView from './components/TableView'
 
 function AppContent() {
-    const { isAuthenticated, user, login, logout } = useAuthContext()
+    const { isAuthenticated, login, logout } = useAuthContext()
 
     const handleLoginSuccess = (userData: any, token: string) => {
         login(userData, token)
@@ -33,7 +35,7 @@ function AppContent() {
                     path="/home"
                     element={
                         <ProtectedRoute>
-                            <Home user={user} onLogout={logout} />
+                            <Home onLogout={logout} />
                         </ProtectedRoute>
                     }
                 />
@@ -70,6 +72,24 @@ function AppContent() {
                     element={
                         <ProtectedRoute>
                             <Users />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/table"
+                    element={
+                        <ProtectedRoute>
+                            <Table />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/table/:tableName"
+                    element={
+                        <ProtectedRoute>
+                            <TableView />
                         </ProtectedRoute>
                     }
                 />
