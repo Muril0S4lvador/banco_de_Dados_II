@@ -1,6 +1,6 @@
 .home-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: #FAFAFA;
 }
 
 .home-container {
@@ -59,7 +59,7 @@
 
 .search-box input:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #FF9900;
 }
 
 .btn-create-table {
@@ -67,7 +67,7 @@
     align-items: center;
     gap: 8px;
     padding: 12px 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #FF9900;
     color: white;
     border: none;
     border-radius: 8px;
@@ -80,7 +80,7 @@
 
 .btn-create-table:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 153, 0, 0.4);
 }
 
 .btn-create-table svg {
@@ -123,8 +123,8 @@
 }
 
 .table-card:hover {
-    border-color: #667eea;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%);
+    border-color: #FF9900;
+    background: rgba(255, 153, 0, 0.05);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
@@ -135,13 +135,13 @@
     justify-content: center;
     width: 50px;
     height: 50px;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    background: rgba(255, 153, 0, 0.1);
     border-radius: 8px;
     flex-shrink: 0;
 }
 
 .table-icon svg {
-    color: #667eea;
+    color: #FF9900;
 }
 
 .table-info {
@@ -169,7 +169,7 @@
 }
 
 .table-card:hover .table-arrow {
-    color: #667eea;
+    color: #FF9900;
     transform: translateX(3px);
 }
 

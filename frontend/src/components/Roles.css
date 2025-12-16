@@ -63,7 +63,7 @@
 .form-group input[type="text"]:focus,
 .form-group textarea:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #FF9900;
 }
 
 .form-group textarea {
@@ -100,7 +100,8 @@
 }
 
 .permissions-table thead {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #232F3E;
+    border-bottom: 3px solid #FF9900;
     color: white;
 }
 
@@ -166,7 +167,7 @@
     cursor: pointer;
     width: 20px;
     height: 20px;
-    accent-color: #667eea;
+    accent-color: #FF9900;
 }
 
 .form-actions {
@@ -199,13 +200,13 @@
 }
 
 .btn-submit {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #FF9900;
     color: white;
 }
 
 .btn-submit:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 153, 0, 0.4);
 }
 
 .btn-submit:active {

@@ -33,17 +33,17 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(102, 126, 234, 0.3);
+  background: rgba(255, 153, 0, 0.3);
   border-radius: 10px;
   transition: background 0.3s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(102, 126, 234, 0.5);
+  background: rgba(255, 153, 0, 0.5);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: rgba(102, 126, 234, 0.7);
+  background: rgba(255, 153, 0, 0.7);
 }
 
 /* Remove as setas do scrollbar */
@@ -54,5 +54,5 @@ body {
 /* Para Firefox */
 * {
   scrollbar-width: thin;
-  scrollbar-color: rgba(102, 126, 234, 0.3) transparent;
+  scrollbar-color: rgba(255, 153, 0, 0.3) transparent;
 }

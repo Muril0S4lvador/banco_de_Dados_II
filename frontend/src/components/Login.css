@@ -3,7 +3,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #232F3E;
 }
 
 .login-box {
@@ -53,7 +53,7 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #FF9900;
 }
 
 .form-group input:disabled {
@@ -86,7 +86,7 @@
 }
 
 .toggle-password:hover:not(:disabled) {
-  color: #667eea;
+  color: #FF9900;
 }
 
 .toggle-password:disabled {
@@ -111,7 +111,7 @@
 .login-button {
   width: 100%;
   padding: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #FF9900;
   color: white;
   border: none;
   border-radius: 5px;
@@ -123,7 +123,7 @@
 
 .login-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 5px 15px rgba(255, 153, 0, 0.4);
 }
 
 .login-button:active:not(:disabled) {

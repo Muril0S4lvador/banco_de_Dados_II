@@ -1,6 +1,6 @@
 .table-page {
     min-height: 100vh;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: #FAFAFA;
 }
 
 .table-container {
@@ -61,7 +61,7 @@
 
 .form-group input[type="text"]:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #FF9900;
 }
 
 .form-group input[type="text"]:disabled {
@@ -125,7 +125,8 @@
     grid-template-columns: 1fr 200px 80px;
     gap: 15px;
     padding: 15px 20px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #232F3E;
+    border-bottom: 3px solid #FF9900;
     color: white;
     font-weight: 600;
     font-size: 14px;
@@ -176,7 +177,7 @@
 .column-field input:focus,
 .column-field select:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #FF9900;
 }
 
 .column-field select {
@@ -244,13 +245,13 @@
 }
 
 .btn-submit {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #FF9900;
     color: white;
 }
 
 .btn-submit:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 153, 0, 0.4);
 }
 
 .btn-submit:active {

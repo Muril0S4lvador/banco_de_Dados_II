@@ -92,7 +92,7 @@
 
 .password-form .password-input-wrapper input:focus {
   outline: none;
-  border-color: #667eea;
+  border-color: #FF9900;
 }
 
 .password-form .toggle-password {
@@ -112,7 +112,7 @@
 }
 
 .password-form .toggle-password:hover {
-  color: #667eea;
+  color: #FF9900;
 }
 
 .password-form .toggle-password svg {
@@ -149,13 +149,13 @@
 }
 
 .btn-submit {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #FF9900;
   color: white;
 }
 
 .btn-submit:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(255, 153, 0, 0.4);
 }
 
 .btn-submit:active {

@@ -69,7 +69,7 @@
 .form-group input[type="text"]:focus,
 .form-group input[type="password"]:focus {
     outline: none;
-    border-color: #667eea;
+    border-color: #FF9900;
 }
 
 .password-input-wrapper {
@@ -97,7 +97,7 @@
 }
 
 .toggle-password:hover {
-    color: #667eea;
+    color: #FF9900;
 }
 
 .toggle-password svg {
@@ -139,20 +139,20 @@
 }
 
 .role-card:hover {
-    border-color: #667eea;
+    border-color: #FF9900;
     background: #f7fafc;
 }
 
 .role-card.selected {
-    border-color: #667eea;
-    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
+    border-color: #FF9900;
+    background: rgba(255, 153, 0, 0.1);
 }
 
 .role-card input[type="checkbox"] {
     cursor: pointer;
     width: 20px;
     height: 20px;
-    accent-color: #667eea;
+    accent-color: #FF9900;
 }
 
 .role-name {
@@ -191,13 +191,13 @@
 }
 
 .btn-submit {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #FF9900;
     color: white;
 }
 
 .btn-submit:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    box-shadow: 0 4px 12px rgba(255, 153, 0, 0.4);
 }
 
 .btn-submit:active {

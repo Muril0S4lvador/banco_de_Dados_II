@@ -25,7 +25,7 @@ function ProtectedRoute({ children, currentPath = window.location.pathname }: Pr
                 justifyContent: 'center',
                 alignItems: 'center',
                 height: '100vh',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                background: '#232f3e',
                 color: 'white',
                 fontSize: '18px'
             }}>

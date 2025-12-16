@@ -1,9 +1,10 @@
 .app-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #232F3E;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
   position: sticky;
   top: 0;
   z-index: 1000;
+  border-bottom: 3px solid #FF9900;
 }
 
 .header-container {
@@ -32,7 +33,7 @@
 .logo-main {
   font-size: 28px;
   font-weight: 700;
-  color: white;
+  color: #FF9900;
   letter-spacing: -0.5px;
 }
 
@@ -60,7 +61,7 @@
 }
 
 .nav-item:hover {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: rgba(255, 153, 0, 0.2);
 }
 
 /* Profile Menu */
@@ -141,7 +142,7 @@
 }
 
 .dropdown-item svg {
-  color: #667eea;
+  color: #FF9900;
 }
 
 .logout-item svg {
