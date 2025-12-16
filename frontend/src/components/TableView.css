@@ -29,6 +29,34 @@
     font-size: 16px;
 }
 
+.table-actions {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+
+.btn-delete-table {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: #fc8181;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.btn-delete-table:hover {
+    background: #f56565;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(252, 129, 129, 0.4);
+}
+
 .btn-create-item {
     display: flex;
     align-items: center;
@@ -188,10 +216,12 @@
         gap: 15px;
     }
 
-    .table-view-header h1 {
-        font-size: 24px;
+    .table-actions {
+        width: 100%;
+        flex-direction: column;
     }
 
+    .btn-delete-table,
     .btn-create-item {
         width: 100%;
         justify-content: center;

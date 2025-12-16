@@ -9,6 +9,7 @@ import Roles from './components/Roles'
 import Users from './components/Users'
 import Table from './components/Table'
 import TableView from './components/TableView'
+import TableItemForm from './components/TableItemForm'
 
 function AppContent() {
     const { isAuthenticated, login, logout } = useAuthContext()
@@ -90,6 +91,15 @@ function AppContent() {
                     element={
                         <ProtectedRoute>
                             <TableView />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/table/:tableName/:itemId"
+                    element={
+                        <ProtectedRoute>
+                            <TableItemForm />
                         </ProtectedRoute>
                     }
                 />

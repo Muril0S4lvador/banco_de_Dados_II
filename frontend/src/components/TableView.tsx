@@ -59,6 +59,14 @@ function TableView() {
         navigate(`/table/${tableName}/new`)
     }
 
+    const handleDeleteTable = () => {
+        if (confirm(`ATENÇÃO: Deseja realmente excluir a tabela "${tableName}" e todos os seus dados?\n\nEsta ação não pode ser desfeita!`)) {
+            console.log('Excluindo tabela:', tableName)
+            alert(`Tabela "${tableName}" excluída com sucesso! (Frontend apenas)`)
+            navigate('/home')
+        }
+    }
+
     return (
         <div className="table-view-page">
             <Header onLogout={logout} />
@@ -68,13 +76,22 @@ function TableView() {
                         <h1>{tableName}</h1>
                         <p>{items.length} {items.length === 1 ? 'item' : 'itens'} na tabela</p>
                     </div>
-                    <button className="btn-create-item" onClick={handleCreateItem}>
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <line x1="12" y1="5" x2="12" y2="19"></line>
-                            <line x1="5" y1="12" x2="19" y2="12"></line>
-                        </svg>
-                        Criar Item
-                    </button>
+                    <div className="table-actions">
+                        <button className="btn-delete-table" onClick={handleDeleteTable}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <polyline points="3 6 5 6 21 6"></polyline>
+                                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                            </svg>
+                            Apagar Tabela
+                        </button>
+                        <button className="btn-create-item" onClick={handleCreateItem}>
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <line x1="12" y1="5" x2="12" y2="19"></line>
+                                <line x1="5" y1="12" x2="19" y2="12"></line>
+                            </svg>
+                            Criar Item
+                        </button>
+                    </div>
                 </div>
 
                 <div className="table-view-content">
