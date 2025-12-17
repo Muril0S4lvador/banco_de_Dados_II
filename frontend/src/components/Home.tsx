@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from './Header'
+import api from '../lib/axios'
 import './Home.css'
 
 interface HomeProps {
@@ -8,30 +9,35 @@ interface HomeProps {
 }
 
 interface TableInfo {
-    name: string
+    tableName: string
     itemCount: number
 }
-
-// Mock de tabelas - futuramente será puxado da API
-const MOCK_TABLES: TableInfo[] = [
-    { name: 'Users', itemCount: 45 },
-    { name: 'Tokens', itemCount: 23 },
-    { name: 'Roles', itemCount: 8 },
-    { name: 'Permissions', itemCount: 120 },
-    { name: 'branch', itemCount: 12 },
-    { name: 'customer', itemCount: 156 },
-    { name: 'account', itemCount: 234 },
-    { name: 'loan', itemCount: 89 },
-    { name: 'borrower', itemCount: 67 },
-    { name: 'depositor', itemCount: 178 },
-]
 
 function Home({ onLogout }: HomeProps) {
     const navigate = useNavigate()
     const [searchTerm, setSearchTerm] = useState('')
+    const [tables, setTables] = useState<TableInfo[]>([])
+    const [loading, setLoading] = useState(true)
 
-    const filteredTables = MOCK_TABLES.filter(table =>
-        table.name.toLowerCase().includes(searchTerm.toLowerCase())
+    useEffect(() => {
+        loadTables()
+    }, [])
+
+    const loadTables = async () => {
+        try {
+            setLoading(true)
+            const response = await api.get('/tables')
+            setTables(response.data.data)
+        } catch (error: any) {
+            console.error('Erro ao carregar tabelas:', error)
+            alert('Erro ao carregar tabelas: ' + (error.response?.data?.error || error.message))
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const filteredTables = tables.filter(table =>
+        table.tableName.toLowerCase().includes(searchTerm.toLowerCase())
     )
 
     const handleTableClick = (tableName: string) => {
@@ -74,7 +80,11 @@ function Home({ onLogout }: HomeProps) {
                 </div>
 
                 <div className="tables-list">
-                    {filteredTables.length === 0 ? (
+                    {loading ? (
+                        <div className="no-results">
+                            <p>Carregando tabelas...</p>
+                        </div>
+                    ) : filteredTables.length === 0 ? (
                         <div className="no-results">
                             <p>Nenhuma tabela encontrada</p>
                         </div>
@@ -82,9 +92,9 @@ function Home({ onLogout }: HomeProps) {
                         <div className="tables-grid">
                             {filteredTables.map((table) => (
                                 <div
-                                    key={table.name}
+                                    key={table.tableName}
                                     className="table-card"
-                                    onClick={() => handleTableClick(table.name)}
+                                    onClick={() => handleTableClick(table.tableName)}
                                 >
                                     <div className="table-icon">
                                         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -94,7 +104,7 @@ function Home({ onLogout }: HomeProps) {
                                         </svg>
                                     </div>
                                     <div className="table-info">
-                                        <h3 className="table-name">{table.name}</h3>
+                                        <h3 className="table-name">{table.tableName}</h3>
                                         <p className="table-count">{table.itemCount} {table.itemCount === 1 ? 'item' : 'itens'}</p>
                                     </div>
                                     <div className="table-arrow">

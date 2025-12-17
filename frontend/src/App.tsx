@@ -5,7 +5,9 @@ import Login from './components/Login'
 import Home from './components/Home'
 import Profile from './components/Profile'
 import Settings from './components/Settings'
-import Roles from './components/Roles'
+import RolesList from './components/RolesList'
+import RoleForm from './components/RoleForm'
+import RoleView from './components/RoleView'
 import Users from './components/Users'
 import Table from './components/Table'
 import TableView from './components/TableView'
@@ -63,7 +65,25 @@ function AppContent() {
                     path="/roles"
                     element={
                         <ProtectedRoute>
-                            <Roles />
+                            <RolesList />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/role"
+                    element={
+                        <ProtectedRoute>
+                            <RoleForm />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/role/:roleId"
+                    element={
+                        <ProtectedRoute>
+                            <RoleView />
                         </ProtectedRoute>
                     }
                 />

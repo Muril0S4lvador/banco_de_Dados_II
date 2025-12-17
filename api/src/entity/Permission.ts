@@ -6,12 +6,14 @@
  * - SK (Sort Key): roleId#tableName
  * - GSI1PK: roleId (para buscar todas as permissões de um role)
  * - GSI1SK: tableName
- * - GSI2PK: userId (para buscar todas as permissões de um usuário)
+ * - GSI2PK: userId (para buscar todas as permissões de um usuário - opcional)
  * - GSI2SK: tableName
+ * 
+ * Nota: userId é opcional para permitir permissões de role sem usuário específico
  */
 export interface Permission {
     permissionId: string;
-    userId: string;
+    userId?: string; // Opcional: para permissões de role sem usuário
     roleId: string;
     allowedView: boolean;
     allowedEdit: boolean;
@@ -27,7 +29,7 @@ export interface Permission {
  */
 export class PermissionEntity implements Permission {
     permissionId: string;
-    userId: string;
+    userId?: string;
     roleId: string;
     allowedView: boolean;
     allowedEdit: boolean;
@@ -39,7 +41,7 @@ export class PermissionEntity implements Permission {
 
     constructor(data: Partial<Permission>) {
         this.permissionId = data.permissionId || this.generateId();
-        this.userId = data.userId || '';
+        this.userId = data.userId;
         this.roleId = data.roleId || '';
         this.allowedView = data.allowedView ?? false;
         this.allowedEdit = data.allowedEdit ?? false;
@@ -146,9 +148,8 @@ export class PermissionEntity implements Permission {
      * Converte para objeto DynamoDB
      */
     toDynamoDB(): Record<string, any> {
-        return {
+        const data: Record<string, any> = {
             permissionId: this.permissionId,
-            userId: this.userId,
             roleId: this.roleId,
             allowedView: this.allowedView,
             allowedEdit: this.allowedEdit,
@@ -158,6 +159,12 @@ export class PermissionEntity implements Permission {
             updatedAt: this.updatedAt,
             entityType: this.entityType,
         };
+
+        if (this.userId) {
+            data.userId = this.userId;
+        }
+
+        return data;
     }
 
     /**
@@ -171,12 +178,12 @@ export class PermissionEntity implements Permission {
      * Cria uma nova permissão
      */
     static createPermission(
-        userId: string,
         roleId: string,
         tableName: string,
         allowedView: boolean = false,
         allowedEdit: boolean = false,
-        allowedDelete: boolean = false
+        allowedDelete: boolean = false,
+        userId?: string
     ): PermissionEntity {
         return new PermissionEntity({
             userId,
@@ -192,10 +199,6 @@ export class PermissionEntity implements Permission {
      * Valida se a permissão é válida
      */
     static validate(permission: Partial<Permission>): { valid: boolean; error?: string } {
-        if (!permission.userId || permission.userId.trim().length === 0) {
-            return { valid: false, error: 'userId is required' };
-        }
-
         if (!permission.roleId || permission.roleId.trim().length === 0) {
             return { valid: false, error: 'roleId is required' };
         }
