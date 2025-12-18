@@ -1,0 +1,37 @@
+{
+    "Roles": [
+        {
+            "PutRequest": {
+                "Item": {
+                    "roleId": {
+                        "S": "admin"
+                    },
+                    "name": {
+                        "S": "Administrator"
+                    },
+                    "type": {
+                        "S": "ADMIN"
+                    },
+                    "description": {
+                        "S": "Full system access"
+                    },
+                    "permissions": {
+                        "L": []
+                    },
+                    "isCustom": {
+                        "BOOL": false
+                    },
+                    "createdAt": {
+                        "S": "2025-01-01T00:00:00.000Z"
+                    },
+                    "updatedAt": {
+                        "S": "2025-01-01T00:00:00.000Z"
+                    },
+                    "entityType": {
+                        "S": "ROLE"
+                    }
+                }
+            }
+        }
+    ]
+}

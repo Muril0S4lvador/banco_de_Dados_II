@@ -1,33 +1,19 @@
-// import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import Header from './Header'
 import './TableView.css'
+import { listItems, deleteItem } from '../services/tableItemService'
+import axios from 'axios'
 
 interface TableItem {
     [key: string]: any
 }
 
-// Mock de dados - futuramente será puxado da API
-const MOCK_DATA: { [tableName: string]: TableItem[] } = {
-    'Users': [
-        { userId: 'user_001', username: 'john.doe', name: 'John Doe', email: 'john@example.com', createdAt: '2024-01-15' },
-        { userId: 'user_002', username: 'jane.smith', name: 'Jane Smith', email: 'jane@example.com', createdAt: '2024-01-16' },
-        { userId: 'user_003', username: 'bob.wilson', name: 'Bob Wilson', email: 'bob@example.com', createdAt: '2024-01-17' },
-    ],
-    'branch': [
-        { branchId: 'br_001', branchName: 'Downtown', city: 'New York', assets: '1500000' },
-        { branchId: 'br_002', branchName: 'Uptown', city: 'Boston', assets: '2300000' },
-    ],
-    'customer': [
-        { customerId: 'cust_001', customerName: 'Alice Johnson', street: '123 Main St', city: 'New York' },
-        { customerId: 'cust_002', customerName: 'Charlie Brown', street: '456 Oak Ave', city: 'Boston' },
-        { customerId: 'cust_003', customerName: 'Diana Prince', street: '789 Elm St', city: 'Chicago' },
-    ],
-    'account': [
-        { accountNumber: 'acc_001', branchId: 'br_001', balance: '15000' },
-        { accountNumber: 'acc_002', branchId: 'br_002', balance: '32000' },
-    ],
+interface TableSchema {
+    name: string
+    keySchema: Array<{ AttributeName: string; KeyType: string }>
+    attributeDefinitions?: Array<{ AttributeName: string; AttributeType: string }>
 }
 
 function TableView() {
@@ -35,23 +21,101 @@ function TableView() {
     const navigate = useNavigate()
     const { logout } = useAuthContext()
 
-    const items = MOCK_DATA[tableName || ''] || []
-    const columns = items.length > 0 ? Object.keys(items[0]) : []
+    const [items, setItems] = useState<TableItem[]>([])
+    const [columns, setColumns] = useState<string[]>([])
+    const [loading, setLoading] = useState(true)
+    const [error, setError] = useState<string | null>(null)
+    const [tableSchema, setTableSchema] = useState<TableSchema | null>(null)
+
+    // Carregar schema da tabela
+    useEffect(() => {
+        const loadTableSchema = async () => {
+            try {
+                const response = await axios.get(`${window.location.origin}/tables`)
+                const tables: TableSchema[] = response.data
+                const schema = tables.find((t: TableSchema) => t.name === tableName)
+                setTableSchema(schema || null)
+            } catch (err) {
+                console.error('Erro ao carregar schema da tabela:', err)
+            }
+        }
+        loadTableSchema()
+    }, [tableName])
+
+    // Carregar itens da tabela
+    useEffect(() => {
+        const loadItems = async () => {
+            if (!tableName) return
+
+            setLoading(true)
+            setError(null)
+
+            try {
+                const response = await listItems(tableName)
+                const loadedItems = response.items || []
+                setItems(loadedItems)
+
+                // Definir colunas baseado nos itens ou schema
+                if (loadedItems.length > 0) {
+                    // Coletar todas as chaves únicas de todos os itens
+                    const allKeys = new Set<string>()
+                    loadedItems.forEach(item => {
+                        Object.keys(item).forEach(key => {
+                            if (key !== '__id') allKeys.add(key)
+                        })
+                    })
+
+                    // Ordenar colunas: primary key primeiro, depois alfabético
+                    const primaryKey = tableSchema?.keySchema.find(k => k.KeyType === 'HASH')?.AttributeName
+                    const sortKey = tableSchema?.keySchema.find(k => k.KeyType === 'RANGE')?.AttributeName
+
+                    const orderedColumns: string[] = []
+                    if (primaryKey && allKeys.has(primaryKey)) {
+                        orderedColumns.push(primaryKey)
+                        allKeys.delete(primaryKey)
+                    }
+                    if (sortKey && allKeys.has(sortKey)) {
+                        orderedColumns.push(sortKey)
+                        allKeys.delete(sortKey)
+                    }
+
+                    const remainingColumns = Array.from(allKeys).sort()
+                    setColumns([...orderedColumns, ...remainingColumns])
+                } else {
+                    setColumns([])
+                }
+            } catch (err: any) {
+                console.error('Erro ao carregar itens:', err)
+                setError(err.response?.data?.message || 'Erro ao carregar itens da tabela')
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadItems()
+    }, [tableName, tableSchema])
 
     const handleRowClick = (item: TableItem) => {
-        const primaryKey = columns[0] // Primeira coluna como chave primária
-        const itemId = item[primaryKey]
+        const itemId = item.__id
+        if (!itemId) return
         navigate(`/table/${tableName}/${itemId}`)
     }
 
-    const handleDeleteItem = (item: TableItem, e: React.MouseEvent) => {
+    const handleDeleteItem = async (item: TableItem, e: React.MouseEvent) => {
         e.stopPropagation()
-        const primaryKey = columns[0]
-        const itemId = item[primaryKey]
+        const itemId = item.__id
+        if (!itemId) return
 
         if (confirm(`Deseja realmente excluir o item ${itemId}?`)) {
-            console.log('Excluindo item:', itemId)
-            alert('Item excluído com sucesso! (Frontend apenas)')
+            try {
+                await deleteItem(tableName!, itemId)
+                // Recarregar itens
+                const response = await listItems(tableName!)
+                setItems(response.items || [])
+            } catch (err: any) {
+                console.error('Erro ao excluir item:', err)
+                alert(err.response?.data?.message || 'Erro ao excluir item')
+            }
         }
     }
 
@@ -59,12 +123,39 @@ function TableView() {
         navigate(`/table/${tableName}/new`)
     }
 
-    const handleDeleteTable = () => {
+    const handleDeleteTable = async () => {
         if (confirm(`ATENÇÃO: Deseja realmente excluir a tabela "${tableName}" e todos os seus dados?\n\nEsta ação não pode ser desfeita!`)) {
-            console.log('Excluindo tabela:', tableName)
-            alert(`Tabela "${tableName}" excluída com sucesso! (Frontend apenas)`)
-            navigate('/home')
+            try {
+                await axios.delete(`${window.location.origin}/tables/${tableName}`)
+                alert(`Tabela "${tableName}" excluída com sucesso!`)
+                navigate('/home')
+            } catch (err: any) {
+                console.error('Erro ao excluir tabela:', err)
+                alert(err.response?.data?.message || 'Erro ao excluir tabela')
+            }
         }
+    }
+
+    if (loading) {
+        return (
+            <div className="table-view-page">
+                <Header onLogout={logout} />
+                <div className="table-view-container">
+                    <div className="loading">Carregando...</div>
+                </div>
+            </div>
+        )
+    }
+
+    if (error) {
+        return (
+            <div className="table-view-page">
+                <Header onLogout={logout} />
+                <div className="table-view-container">
+                    <div className="error-message">{error}</div>
+                </div>
+            </div>
+        )
     }
 
     return (

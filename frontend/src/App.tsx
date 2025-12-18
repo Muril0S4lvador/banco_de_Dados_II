@@ -9,6 +9,8 @@ import RolesList from './components/RolesList'
 import RoleForm from './components/RoleForm'
 import RoleView from './components/RoleView'
 import Users from './components/Users'
+import UsersList from './components/UsersList'
+import UserView from './components/UserView'
 import Table from './components/Table'
 import TableView from './components/TableView'
 import TableItemForm from './components/TableItemForm'
@@ -92,7 +94,25 @@ function AppContent() {
                     path="/users"
                     element={
                         <ProtectedRoute>
+                            <UsersList />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/user"
+                    element={
+                        <ProtectedRoute>
                             <Users />
+                        </ProtectedRoute>
+                    }
+                />
+
+                <Route
+                    path="/user/:userId"
+                    element={
+                        <ProtectedRoute>
+                            <UserView />
                         </ProtectedRoute>
                     }
                 />

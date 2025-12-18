@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { RouteResponse } from "../helpers/RouteResponse";
 import { RoleRepository } from "../repository/RoleRepository";
+import { UserRepository } from "../repository/UserRepository";
 import { RoleEntity, RolePermission } from "../entity/Role";
 
 export class RoleController {
@@ -287,6 +288,72 @@ export class RoleController {
         } catch (error: any) {
             console.error('Error updating role:', error);
             return RouteResponse.error(res, 'Erro ao atualizar role: ' + error.message, 500);
+        }
+    }
+
+    /**
+     * @swagger
+     * /role/{roleId}:
+     *   delete:
+     *     summary: Deletar role
+     *     tags: [Roles]
+     *     produces:
+     *       - application/json
+     *     parameters:
+     *       - name: roleId
+     *         in: path
+     *         required: true
+     *         description: ID da role
+     *         schema:
+     *           type: string
+     *     responses:
+     *       '200':
+     *         description: Role deletada com sucesso
+     *       '403':
+     *         description: Role não pode ser deletada (sistema ou em uso)
+     *       '404':
+     *         description: Role não encontrada
+     *       '500':
+     *         description: Erro interno do servidor
+     */
+    static async deleteRole(req: Request, res: Response) {
+        try {
+            const { roleId } = req.params;
+
+            if (!roleId) {
+                return RouteResponse.error(res, 'roleId é obrigatório', 400);
+            }
+
+            const roleRepository = new RoleRepository();
+            const role = await roleRepository.findRoleByRoleId(roleId);
+
+            if (!role) {
+                return RouteResponse.error(res, 'Role não encontrada', 404);
+            }
+
+            // Verifica se é uma role do sistema
+            if (!role.isCustom) {
+                return RouteResponse.error(res, 'Não é permitido deletar roles do sistema', 403);
+            }
+
+            // Verifica se a role está sendo usada por algum usuário
+            const userRepository = new UserRepository();
+            const usersWithRole = await userRepository.findUsersByRole(roleId);
+
+            if (usersWithRole.length > 0) {
+                return RouteResponse.error(
+                    res,
+                    `Não é possível deletar esta role pois está sendo usada por ${usersWithRole.length} usuário(s)`,
+                    403
+                );
+            }
+
+            await roleRepository.deleteRole(roleId);
+
+            return RouteResponse.success(res, { message: 'Role deletada com sucesso' });
+        } catch (error: any) {
+            console.error('Error deleting role:', error);
+            return RouteResponse.error(res, 'Erro ao deletar role: ' + error.message, 500);
         }
     }
 }

@@ -4,10 +4,10 @@
       "PutRequest": {
         "Item": {
           "userId": { "S": "user_admin_001" },
-          "username": { "S": "ADMIN" },
-          "name": { "S": "Administrator" },
+          "username": { "S": "admin" },
+          "name": { "S": "Admin" },
           "password": { "S": "$2a$10$2kEl2uCxtJBMk1hEjA4nTO8HKGZgqcDV6nbU7IOQBOeVqPztgtU.e" },
-          "roleIds": { "L": [{ "S": "role_admin" }] },
+          "roleIds": { "L": [{ "S": "admin" }] },
           "createdAt": { "S": "2025-01-01T00:00:00.000Z" },
           "updatedAt": { "S": "2025-01-01T00:00:00.000Z" },
           "entityType": { "S": "USER" }

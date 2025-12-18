@@ -1,18 +1,14 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import Header from './Header'
+import { userService } from '../services/userService'
+import { roleService, Role } from '../services/roleService'
 import './Users.css'
-
-// Mock de roles - futuramente será puxado da API
-const MOCK_ROLES = [
-    { roleId: 'role_1', name: 'Administrator' },
-    { roleId: 'role_2', name: 'Manager' },
-    { roleId: 'role_3', name: 'Operator' },
-    { roleId: 'role_4', name: 'Viewer' },
-]
 
 function Users() {
     const { logout } = useAuthContext()
+    const navigate = useNavigate()
 
     const [username, setUsername] = useState('')
     const [name, setName] = useState('')
@@ -21,6 +17,27 @@ function Users() {
     const [selectedRoles, setSelectedRoles] = useState<string[]>([])
     const [showPassword, setShowPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+    const [roles, setRoles] = useState<Role[]>([])
+    const [loading, setLoading] = useState(false)
+    const [loadingRoles, setLoadingRoles] = useState(true)
+
+    // Carregar roles ao montar o componente
+    useEffect(() => {
+        loadRoles()
+    }, [])
+
+    const loadRoles = async () => {
+        try {
+            setLoadingRoles(true)
+            const data = await roleService.listRoles()
+            setRoles(data)
+        } catch (error) {
+            console.error('Erro ao carregar roles:', error)
+            alert('Erro ao carregar roles. Tente novamente.')
+        } finally {
+            setLoadingRoles(false)
+        }
+    }
 
     const handleRoleToggle = (roleId: string) => {
         setSelectedRoles(prev => {
@@ -32,7 +49,7 @@ function Users() {
         })
     }
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
 
         // Validações
@@ -66,25 +83,25 @@ function Users() {
             return
         }
 
-        // Preparar dados para envio (futuramente será enviado para a API)
-        const userData = {
-            username,
-            name,
-            password,
-            roleIds: selectedRoles
+        // Criar usuário via API
+        try {
+            setLoading(true)
+            await userService.createUser({
+                username: username.trim(),
+                name: name.trim(),
+                password,
+                roleIds: selectedRoles
+            })
+
+            alert('Usuário criado com sucesso!')
+            navigate('/users')
+        } catch (error: any) {
+            console.error('Erro ao criar usuário:', error)
+            const errorMessage = error.response?.data?.message || 'Erro ao criar usuário. Tente novamente.'
+            alert(errorMessage)
+        } finally {
+            setLoading(false)
         }
-
-        console.log('Usuário criado:', userData)
-        alert('Usuário criado com sucesso! (Frontend apenas)')
-
-        // Resetar formulário
-        setUsername('')
-        setName('')
-        setPassword('')
-        setConfirmPassword('')
-        setSelectedRoles([])
-        setShowPassword(false)
-        setShowConfirmPassword(false)
     }
 
     return (
@@ -195,39 +212,46 @@ function Users() {
                             Selecione as roles que serão atribuídas ao usuário
                         </p>
 
-                        <div className="roles-grid">
-                            {MOCK_ROLES.map((role) => (
-                                <div
-                                    key={role.roleId}
-                                    className={`role-card ${selectedRoles.includes(role.roleId) ? 'selected' : ''}`}
-                                    onClick={() => handleRoleToggle(role.roleId)}
-                                >
-                                    <input
-                                        type="checkbox"
-                                        checked={selectedRoles.includes(role.roleId)}
-                                        onChange={() => handleRoleToggle(role.roleId)}
-                                        onClick={(e) => e.stopPropagation()}
-                                    />
-                                    <span className="role-name">{role.name}</span>
-                                </div>
-                            ))}
-                        </div>
+                        {loadingRoles ? (
+                            <p style={{ textAlign: 'center', padding: '20px', color: '#718096' }}>
+                                Carregando roles...
+                            </p>
+                        ) : roles.length === 0 ? (
+                            <p style={{ textAlign: 'center', padding: '20px', color: '#718096' }}>
+                                Nenhuma role disponível
+                            </p>
+                        ) : (
+                            <div className="roles-grid">
+                                {roles.map((role) => (
+                                    <div
+                                        key={role.roleId}
+                                        className={`role-card ${selectedRoles.includes(role.roleId) ? 'selected' : ''}`}
+                                        onClick={() => handleRoleToggle(role.roleId)}
+                                    >
+                                        <input
+                                            type="checkbox"
+                                            checked={selectedRoles.includes(role.roleId)}
+                                            onChange={() => handleRoleToggle(role.roleId)}
+                                            onClick={(e) => e.stopPropagation()}
+                                        />
+                                        <span className="role-name">{role.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="form-actions">
-                        <button type="button" className="btn-cancel" onClick={() => {
-                            setUsername('')
-                            setName('')
-                            setPassword('')
-                            setConfirmPassword('')
-                            setSelectedRoles([])
-                            setShowPassword(false)
-                            setShowConfirmPassword(false)
-                        }}>
+                        <button
+                            type="button"
+                            className="btn-cancel"
+                            onClick={() => navigate('/users')}
+                            disabled={loading}
+                        >
                             Cancelar
                         </button>
-                        <button type="submit" className="btn-submit">
-                            Criar Usuário
+                        <button type="submit" className="btn-submit" disabled={loading}>
+                            {loading ? 'Criando...' : 'Criar Usuário'}
                         </button>
                     </div>
                 </form>
