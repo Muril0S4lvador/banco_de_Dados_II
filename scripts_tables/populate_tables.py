@@ -46,6 +46,21 @@ def populate():
             data = json.load(f)
 
         for table_name, items in data.items():
+            # adiciona um id lógico para tabelas que só têm FKs (borrower, depositor)
+            if table_name in ("borrower", "depositor"):
+                for entry in items:
+                    item = entry.get("PutRequest", {}).get("Item", {})
+                    if table_name == "borrower":
+                        customer = item.get("customer_name", {}).get("S")
+                        loan = item.get("loan_number", {}).get("S")
+                        if customer and loan:
+                            item["id"] = {"S": f"{customer}::{loan}"}
+                    if table_name == "depositor":
+                        customer = item.get("customer_name", {}).get("S")
+                        account = item.get("account_number", {}).get("S")
+                        if customer and account:
+                            item["id"] = {"S": f"{customer}::{account}"}
+
             print(f"➡️  Inserindo {len(items)} itens na tabela '{table_name}'...")
             batch_write(table_name, items)
     print("✓ População concluída com sucesso!")

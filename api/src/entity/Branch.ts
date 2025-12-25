@@ -1,8 +1,7 @@
 export class Branch {
-    branch_name?: string
+    branch_name?: string // PK
     branch_city?: string
     assets?: number
-    __id?: string
 
     constructor(init?: Partial<Branch>) {
         Object.assign(this, init)

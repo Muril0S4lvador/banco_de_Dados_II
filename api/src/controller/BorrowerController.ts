@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { RouteResponse } from "../helpers/RouteResponse"
-import { DynamoTableHelper } from "../helpers/DynamoTableHelper"
 import { Borrower } from "../entity/Borrower"
+import { BorrowerRepository } from "../repository/BorrowerRepository"
 
 export class BorrowerController {
     private static tableName = 'borrower'
@@ -14,12 +14,33 @@ export class BorrowerController {
      *     tags: [Borrower]
      *     responses:
      *       '200':
-     *         description: Lista de itens
+    *         description: Lista de borrowers
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: array
+    *                   items:
+    *                     type: object
+    *                     properties:
+    *                       id:
+    *                         type: string
+    *                       customer_name:
+    *                         type: string
+    *                       loan_number:
+    *                         type: string
+    *                       __id:
+    *                         type: string
      */
     static async list(req: Request, res: Response) {
         try {
-            const result = await DynamoTableHelper.listItems<Borrower>(this.tableName)
-            return RouteResponse.success(res, result.items, 'Itens listados com sucesso')
+            const repository = new BorrowerRepository()
+            const items = await repository.list()
+            return RouteResponse.success(res, items, 'Itens listados com sucesso')
         } catch (error: any) {
             console.error('Error listing borrower:', error)
             return RouteResponse.error(res, 'Erro ao listar itens: ' + error.message, 500)
@@ -38,17 +59,43 @@ export class BorrowerController {
      *         required: true
      *         schema:
      *           type: string
-     *         description: "customer_name::loan_number"
+    *         description: ID do borrower
      *     responses:
      *       '200':
      *         description: Item encontrado
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     id:
+    *                       type: string
+    *                     customer_name:
+    *                       type: string
+    *                     loan_number:
+    *                       type: string
+    *                     __id:
+    *                       type: string
      *       '404':
      *         description: Não encontrado
      */
     static async get(req: Request, res: Response) {
         try {
-            const { itemId } = req.params
-            const item = await DynamoTableHelper.getItem<Borrower>(this.tableName, itemId)
+            let itemId: string
+            try {
+                itemId = decodeURIComponent(req.params.itemId)
+            } catch (err) {
+                return RouteResponse.error(res, 'itemId inválido', 400)
+            }
+            if (!itemId) return RouteResponse.error(res, 'itemId é obrigatório', 400)
+            if (itemId.split('::').length !== 2) return RouteResponse.error(res, 'itemId inválido, esperado "customer_name::loan_number"', 400)
+            const repository = new BorrowerRepository()
+            const item = await repository.getById(itemId)
             if (!item) return RouteResponse.error(res, 'Item não encontrado', 404)
             return RouteResponse.success(res, item, 'Item encontrado')
         } catch (error: any) {
@@ -68,16 +115,45 @@ export class BorrowerController {
      *       content:
      *         application/json:
      *           schema:
-     *             type: object
+    *             type: object
+    *             required: [customer_name, loan_number]
+    *             properties:
+    *               customer_name:
+    *                 type: string
+    *               loan_number:
+    *                 type: string
      *     responses:
      *       '201':
-     *         description: Item criado
+    *         description: Borrower criado
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     id:
+    *                       type: string
+    *                     customer_name:
+    *                       type: string
+    *                     loan_number:
+    *                       type: string
+    *                     __id:
+    *                       type: string
      */
     static async create(req: Request, res: Response) {
         try {
             const itemData = req.body
             if (!itemData || Object.keys(itemData).length === 0) return RouteResponse.error(res, 'Dados do item são obrigatórios', 400)
-            const created = await DynamoTableHelper.createItem<Borrower>(this.tableName, itemData)
+            const { customer_name, loan_number } = itemData
+            if (typeof customer_name !== 'string' || typeof loan_number !== 'string') {
+                return RouteResponse.error(res, 'Tipos inválidos: customer_name e loan_number devem ser strings', 400)
+            }
+            const repository = new BorrowerRepository()
+            const created = await repository.create(itemData)
             return RouteResponse.success(res, created, 'Item criado com sucesso', 201)
         } catch (error: any) {
             console.error('Error creating borrower:', error)
@@ -97,23 +173,58 @@ export class BorrowerController {
      *         required: true
      *         schema:
      *           type: string
-     *         description: "customer_name::loan_number"
+    *         description: ID do borrower
      *     requestBody:
      *       required: true
      *       content:
      *         application/json:
      *           schema:
-     *             type: object
+    *             type: object
+    *             properties:
+    *               customer_name:
+    *                 type: string
+    *               loan_number:
+    *                 type: string
      *     responses:
      *       '200':
-     *         description: Item atualizado
+    *         description: Borrower atualizado
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     id:
+    *                       type: string
+    *                     customer_name:
+    *                       type: string
+    *                     loan_number:
+    *                       type: string
+    *                     __id:
+    *                       type: string
      */
     static async update(req: Request, res: Response) {
         try {
-            const { itemId } = req.params
+            let itemId: string
+            try {
+                itemId = decodeURIComponent(req.params.itemId)
+            } catch (err) {
+                return RouteResponse.error(res, 'itemId inválido', 400)
+            }
+            if (!itemId) return RouteResponse.error(res, 'itemId é obrigatório', 400)
+            if (itemId.split('::').length !== 2) return RouteResponse.error(res, 'itemId inválido, esperado "customer_name::loan_number"', 400)
             const itemData = req.body
             if (!itemData || Object.keys(itemData).length === 0) return RouteResponse.error(res, 'Dados do item são obrigatórios', 400)
-            const updated = await DynamoTableHelper.updateItem<Borrower>(this.tableName, itemId, itemData)
+            const { customer_name, loan_number } = itemData
+            if ((customer_name !== undefined && typeof customer_name !== 'string') || (loan_number !== undefined && typeof loan_number !== 'string')) {
+                return RouteResponse.error(res, 'Tipos inválidos: customer_name e loan_number devem ser strings', 400)
+            }
+            const repository = new BorrowerRepository()
+            const updated = await repository.update(itemId, itemData)
             return RouteResponse.success(res, updated, 'Item atualizado com sucesso')
         } catch (error: any) {
             console.error('Error updating borrower:', error)
@@ -133,15 +244,35 @@ export class BorrowerController {
      *         required: true
      *         schema:
      *           type: string
-     *         description: "customer_name::loan_number"
+    *         description: ID do borrower
      *     responses:
      *       '200':
-     *         description: Item deletado
+    *         description: Borrower deletado
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     message:
+    *                       type: string
      */
     static async delete(req: Request, res: Response) {
         try {
-            const { itemId } = req.params
-            await DynamoTableHelper.deleteItem(this.tableName, itemId)
+            let itemId: string
+            try {
+                itemId = decodeURIComponent(req.params.itemId)
+            } catch (err) {
+                return RouteResponse.error(res, 'itemId inválido', 400)
+            }
+            if (!itemId) return RouteResponse.error(res, 'itemId é obrigatório', 400)
+            if (itemId.split('::').length !== 2) return RouteResponse.error(res, 'itemId inválido, esperado "customer_name::loan_number"', 400)
+            const repository = new BorrowerRepository()
+            await repository.delete(itemId)
             return RouteResponse.success(res, { message: 'Item deletado com sucesso' })
         } catch (error: any) {
             console.error('Error deleting borrower:', error)

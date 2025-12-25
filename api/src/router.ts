@@ -76,7 +76,7 @@ router.post("/loan", LoanController.create);
 router.put("/loan/:itemId", LoanController.update);
 router.delete("/loan/:itemId", LoanController.delete);
 
-// borrower (itemId = customer_name::loan_number)
+// borrower (itemId = id gerado pelo backend)
 router.get("/borrower", BorrowerController.list);
 router.get("/borrower/:itemId", BorrowerController.get);
 router.post("/borrower", BorrowerController.create);

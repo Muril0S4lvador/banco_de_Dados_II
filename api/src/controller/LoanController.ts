@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { RouteResponse } from "../helpers/RouteResponse"
-import { DynamoTableHelper } from "../helpers/DynamoTableHelper"
 import { Loan } from "../entity/Loan"
+import { LoanRepository } from "../repository/LoanRepository"
 
 export class LoanController {
     private static tableName = 'loan'
@@ -14,12 +14,33 @@ export class LoanController {
      *     tags: [Loan]
      *     responses:
      *       '200':
-     *         description: Lista de itens
+    *         description: Lista de empréstimos
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: array
+    *                   items:
+    *                     type: object
+    *                     properties:
+    *                       loan_number:
+    *                         type: string
+    *                       branch_name:
+    *                         type: string
+    *                       amount:
+    *                         type: number
+    *                       __id:
+    *                         type: string
      */
     static async list(req: Request, res: Response) {
         try {
-            const result = await DynamoTableHelper.listItems<Loan>(this.tableName)
-            return RouteResponse.success(res, result.items, 'Itens listados com sucesso')
+            const repository = new LoanRepository()
+            const items = await repository.list()
+            return RouteResponse.success(res, items, 'Itens listados com sucesso')
         } catch (error: any) {
             console.error('Error listing loan:', error)
             return RouteResponse.error(res, 'Erro ao listar itens: ' + error.message, 500)
@@ -41,13 +62,38 @@ export class LoanController {
      *     responses:
      *       '200':
      *         description: Item encontrado
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     loan_number:
+    *                       type: string
+    *                     branch_name:
+    *                       type: string
+    *                     amount:
+    *                       type: number
+    *                     __id:
+    *                       type: string
      *       '404':
      *         description: Não encontrado
      */
     static async get(req: Request, res: Response) {
         try {
-            const { itemId } = req.params
-            const item = await DynamoTableHelper.getItem<Loan>(this.tableName, itemId)
+            let itemId: string
+            try {
+                itemId = decodeURIComponent(req.params.itemId)
+            } catch (err) {
+                return RouteResponse.error(res, 'itemId inválido', 400)
+            }
+            if (!itemId) return RouteResponse.error(res, 'itemId é obrigatório', 400)
+            const repository = new LoanRepository()
+            const item = await repository.getById(itemId)
             if (!item) return RouteResponse.error(res, 'Item não encontrado', 404)
             return RouteResponse.success(res, item, 'Item encontrado')
         } catch (error: any) {
@@ -67,16 +113,47 @@ export class LoanController {
      *       content:
      *         application/json:
      *           schema:
-     *             type: object
+    *             type: object
+    *             required: [loan_number, branch_name, amount]
+    *             properties:
+    *               loan_number:
+    *                 type: string
+    *               branch_name:
+    *                 type: string
+    *               amount:
+    *                 type: number
      *     responses:
      *       '201':
-     *         description: Item criado
+    *         description: Empréstimo criado
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     loan_number:
+    *                       type: string
+    *                     branch_name:
+    *                       type: string
+    *                     amount:
+    *                       type: number
+    *                     __id:
+    *                       type: string
      */
     static async create(req: Request, res: Response) {
         try {
             const itemData = req.body
             if (!itemData || Object.keys(itemData).length === 0) return RouteResponse.error(res, 'Dados do item são obrigatórios', 400)
-            const created = await DynamoTableHelper.createItem<Loan>(this.tableName, itemData)
+            const { loan_number, branch_name, amount } = itemData
+            if (typeof loan_number !== 'string' || typeof branch_name !== 'string' || typeof amount !== 'number' || Number.isNaN(amount)) {
+                return RouteResponse.error(res, 'Tipos inválidos: loan_number (string), branch_name (string), amount (number) são obrigatórios', 400)
+            }
+            const repository = new LoanRepository()
+            const created = await repository.create(itemData)
             return RouteResponse.success(res, created, 'Item criado com sucesso', 201)
         } catch (error: any) {
             console.error('Error creating loan:', error)
@@ -101,17 +178,51 @@ export class LoanController {
      *       content:
      *         application/json:
      *           schema:
-     *             type: object
+    *             type: object
+    *             properties:
+    *               branch_name:
+    *                 type: string
+    *               amount:
+    *                 type: number
      *     responses:
      *       '200':
-     *         description: Item atualizado
+    *         description: Empréstimo atualizado
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     loan_number:
+    *                       type: string
+    *                     branch_name:
+    *                       type: string
+    *                     amount:
+    *                       type: number
+    *                     __id:
+    *                       type: string
      */
     static async update(req: Request, res: Response) {
         try {
-            const { itemId } = req.params
+            let itemId: string
+            try {
+                itemId = decodeURIComponent(req.params.itemId)
+            } catch (err) {
+                return RouteResponse.error(res, 'itemId inválido', 400)
+            }
+            if (!itemId) return RouteResponse.error(res, 'itemId é obrigatório', 400)
             const itemData = req.body
             if (!itemData || Object.keys(itemData).length === 0) return RouteResponse.error(res, 'Dados do item são obrigatórios', 400)
-            const updated = await DynamoTableHelper.updateItem<Loan>(this.tableName, itemId, itemData)
+            const { branch_name, amount } = itemData
+            if ((branch_name !== undefined && typeof branch_name !== 'string') || (amount !== undefined && (typeof amount !== 'number' || Number.isNaN(amount)))) {
+                return RouteResponse.error(res, 'Tipos inválidos: branch_name deve ser string e amount deve ser number', 400)
+            }
+            const repository = new LoanRepository()
+            const updated = await repository.update(itemId, itemData)
             return RouteResponse.success(res, updated, 'Item atualizado com sucesso')
         } catch (error: any) {
             console.error('Error updating loan:', error)
@@ -133,12 +244,31 @@ export class LoanController {
      *           type: string
      *     responses:
      *       '200':
-     *         description: Item deletado
+    *         description: Empréstimo deletado
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     message:
+    *                       type: string
      */
     static async delete(req: Request, res: Response) {
         try {
-            const { itemId } = req.params
-            await DynamoTableHelper.deleteItem(this.tableName, itemId)
+            let itemId: string
+            try {
+                itemId = decodeURIComponent(req.params.itemId)
+            } catch (err) {
+                return RouteResponse.error(res, 'itemId inválido', 400)
+            }
+            if (!itemId) return RouteResponse.error(res, 'itemId é obrigatório', 400)
+            const repository = new LoanRepository()
+            await repository.delete(itemId)
             return RouteResponse.success(res, { message: 'Item deletado com sucesso' })
         } catch (error: any) {
             console.error('Error deleting loan:', error)

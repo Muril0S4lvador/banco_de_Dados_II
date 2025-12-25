@@ -1,8 +1,7 @@
 export class Account {
-    account_number?: string
-    branch_name?: string
+    account_number?: string // PK
+    branch_name?: string // FK
     balance?: number
-    __id?: string
 
     constructor(init?: Partial<Account>) {
         Object.assign(this, init)

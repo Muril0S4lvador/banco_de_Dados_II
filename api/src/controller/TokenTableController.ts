@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { RouteResponse } from "../helpers/RouteResponse"
-import { DynamoTableHelper } from "../helpers/DynamoTableHelper"
 import { Token } from "../entity/Token"
+import { TokenRepository } from "../repository/TokenRepository"
 
 export class TokenTableController {
     private static tableName = 'Tokens'
@@ -18,8 +18,9 @@ export class TokenTableController {
      */
     static async list(req: Request, res: Response) {
         try {
-            const result = await DynamoTableHelper.listItems<Token>(this.tableName)
-            return RouteResponse.success(res, result.items, 'Itens listados com sucesso')
+            const repository = new TokenRepository()
+            const items = await repository.list()
+            return RouteResponse.success(res, items, 'Itens listados com sucesso')
         } catch (error: any) {
             console.error('Error listing tokens:', error)
             return RouteResponse.error(res, 'Erro ao listar itens: ' + error.message, 500)
@@ -47,7 +48,8 @@ export class TokenTableController {
     static async get(req: Request, res: Response) {
         try {
             const { itemId } = req.params
-            const item = await DynamoTableHelper.getItem<Token>(this.tableName, itemId)
+            const repository = new TokenRepository()
+            const item = await repository.getById(itemId)
             if (!item) return RouteResponse.error(res, 'Item não encontrado', 404)
             return RouteResponse.success(res, item, 'Item encontrado')
         } catch (error: any) {
@@ -76,7 +78,8 @@ export class TokenTableController {
         try {
             const itemData = req.body
             if (!itemData || Object.keys(itemData).length === 0) return RouteResponse.error(res, 'Dados do item são obrigatórios', 400)
-            const created = await DynamoTableHelper.createItem<Token>(this.tableName, itemData)
+            const repository = new TokenRepository()
+            const created = await repository.create(itemData)
             return RouteResponse.success(res, created, 'Item criado com sucesso', 201)
         } catch (error: any) {
             console.error('Error creating token:', error)
@@ -111,7 +114,8 @@ export class TokenTableController {
             const { itemId } = req.params
             const itemData = req.body
             if (!itemData || Object.keys(itemData).length === 0) return RouteResponse.error(res, 'Dados do item são obrigatórios', 400)
-            const updated = await DynamoTableHelper.updateItem<Token>(this.tableName, itemId, itemData)
+            const repository = new TokenRepository()
+            const updated = await repository.update(itemId, itemData)
             return RouteResponse.success(res, updated, 'Item atualizado com sucesso')
         } catch (error: any) {
             console.error('Error updating token:', error)
@@ -138,7 +142,8 @@ export class TokenTableController {
     static async delete(req: Request, res: Response) {
         try {
             const { itemId } = req.params
-            await DynamoTableHelper.deleteItem(this.tableName, itemId)
+            const repository = new TokenRepository()
+            await repository.deleteById(itemId)
             return RouteResponse.success(res, { message: 'Item deletado com sucesso' })
         } catch (error: any) {
             console.error('Error deleting token:', error)

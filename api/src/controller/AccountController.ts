@@ -1,7 +1,7 @@
 import { Request, Response } from "express"
 import { RouteResponse } from "../helpers/RouteResponse"
-import { DynamoTableHelper } from "../helpers/DynamoTableHelper"
 import { Account } from "../entity/Account"
+import { AccountRepository } from "../repository/AccountRepository"
 
 export class AccountController {
     private static tableName = 'account'
@@ -14,12 +14,33 @@ export class AccountController {
      *     tags: [Account]
      *     responses:
      *       '200':
-     *         description: Lista de itens
+    *         description: Lista de contas
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: array
+    *                   items:
+    *                     type: object
+    *                     properties:
+    *                       account_number:
+    *                         type: string
+    *                       branch_name:
+    *                         type: string
+    *                       balance:
+    *                         type: number
+    *                       __id:
+    *                         type: string
      */
     static async list(req: Request, res: Response) {
         try {
-            const result = await DynamoTableHelper.listItems<Account>(this.tableName)
-            return RouteResponse.success(res, result.items, 'Itens listados com sucesso')
+            const repository = new AccountRepository()
+            const items = await repository.list()
+            return RouteResponse.success(res, items, 'Itens listados com sucesso')
         } catch (error: any) {
             console.error('Error listing account:', error)
             return RouteResponse.error(res, 'Erro ao listar itens: ' + error.message, 500)
@@ -41,13 +62,38 @@ export class AccountController {
      *     responses:
      *       '200':
      *         description: Item encontrado
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     account_number:
+    *                       type: string
+    *                     branch_name:
+    *                       type: string
+    *                     balance:
+    *                       type: number
+    *                     __id:
+    *                       type: string
      *       '404':
      *         description: Não encontrado
      */
     static async get(req: Request, res: Response) {
         try {
-            const { itemId } = req.params
-            const item = await DynamoTableHelper.getItem<Account>(this.tableName, itemId)
+            let itemId: string
+            try {
+                itemId = decodeURIComponent(req.params.itemId)
+            } catch (err) {
+                return RouteResponse.error(res, 'itemId inválido', 400)
+            }
+            if (!itemId) return RouteResponse.error(res, 'itemId é obrigatório', 400)
+            const repository = new AccountRepository()
+            const item = await repository.getById(itemId)
             if (!item) return RouteResponse.error(res, 'Item não encontrado', 404)
             return RouteResponse.success(res, item, 'Item encontrado')
         } catch (error: any) {
@@ -67,16 +113,47 @@ export class AccountController {
      *       content:
      *         application/json:
      *           schema:
-     *             type: object
+    *             type: object
+    *             required: [account_number, branch_name, balance]
+    *             properties:
+    *               account_number:
+    *                 type: string
+    *               branch_name:
+    *                 type: string
+    *               balance:
+    *                 type: number
      *     responses:
      *       '201':
-     *         description: Item criado
+    *         description: Conta criada
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     account_number:
+    *                       type: string
+    *                     branch_name:
+    *                       type: string
+    *                     balance:
+    *                       type: number
+    *                     __id:
+    *                       type: string
      */
     static async create(req: Request, res: Response) {
         try {
             const itemData = req.body
             if (!itemData || Object.keys(itemData).length === 0) return RouteResponse.error(res, 'Dados do item são obrigatórios', 400)
-            const created = await DynamoTableHelper.createItem<Account>(this.tableName, itemData)
+            const { account_number, branch_name, balance } = itemData
+            if (typeof account_number !== 'string' || typeof branch_name !== 'string' || typeof balance !== 'number' || Number.isNaN(balance)) {
+                return RouteResponse.error(res, 'Tipos inválidos: account_number (string), branch_name (string), balance (number) são obrigatórios', 400)
+            }
+            const repository = new AccountRepository()
+            const created = await repository.create(itemData)
             return RouteResponse.success(res, created, 'Item criado com sucesso', 201)
         } catch (error: any) {
             console.error('Error creating account:', error)
@@ -100,18 +177,52 @@ export class AccountController {
      *       required: true
      *       content:
      *         application/json:
-     *           schema:
-     *             type: object
+    *           schema:
+    *             type: object
+    *             properties:
+    *               branch_name:
+    *                 type: string
+    *               balance:
+    *                 type: number
      *     responses:
      *       '200':
-     *         description: Item atualizado
+    *         description: Conta atualizada
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     account_number:
+    *                       type: string
+    *                     branch_name:
+    *                       type: string
+    *                     balance:
+    *                       type: number
+    *                     __id:
+    *                       type: string
      */
     static async update(req: Request, res: Response) {
         try {
-            const { itemId } = req.params
+            let itemId: string
+            try {
+                itemId = decodeURIComponent(req.params.itemId)
+            } catch (err) {
+                return RouteResponse.error(res, 'itemId inválido', 400)
+            }
+            if (!itemId) return RouteResponse.error(res, 'itemId é obrigatório', 400)
             const itemData = req.body
             if (!itemData || Object.keys(itemData).length === 0) return RouteResponse.error(res, 'Dados do item são obrigatórios', 400)
-            const updated = await DynamoTableHelper.updateItem<Account>(this.tableName, itemId, itemData)
+            const { branch_name, balance } = itemData
+            if ((branch_name !== undefined && typeof branch_name !== 'string') || (balance !== undefined && (typeof balance !== 'number' || Number.isNaN(balance)))) {
+                return RouteResponse.error(res, 'Tipos inválidos: branch_name deve ser string e balance deve ser number', 400)
+            }
+            const repository = new AccountRepository()
+            const updated = await repository.update(itemId, itemData)
             return RouteResponse.success(res, updated, 'Item atualizado com sucesso')
         } catch (error: any) {
             console.error('Error updating account:', error)
@@ -133,12 +244,31 @@ export class AccountController {
      *           type: string
      *     responses:
      *       '200':
-     *         description: Item deletado
+    *         description: Conta deletada
+    *         content:
+    *           application/json:
+    *             schema:
+    *               type: object
+    *               properties:
+    *                 success:
+    *                   type: boolean
+    *                 data:
+    *                   type: object
+    *                   properties:
+    *                     message:
+    *                       type: string
      */
     static async delete(req: Request, res: Response) {
         try {
-            const { itemId } = req.params
-            await DynamoTableHelper.deleteItem(this.tableName, itemId)
+            let itemId: string
+            try {
+                itemId = decodeURIComponent(req.params.itemId)
+            } catch (err) {
+                return RouteResponse.error(res, 'itemId inválido', 400)
+            }
+            if (!itemId) return RouteResponse.error(res, 'itemId é obrigatório', 400)
+            const repository = new AccountRepository()
+            await repository.delete(itemId)
             return RouteResponse.success(res, { message: 'Item deletado com sucesso' })
         } catch (error: any) {
             console.error('Error deleting account:', error)
