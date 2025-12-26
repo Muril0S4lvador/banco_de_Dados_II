@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from './Header'
+import { usePermissions } from '../contexts/PermissionContext'
 import api from '../lib/axios'
 import './Home.css'
 
@@ -15,6 +16,7 @@ interface TableInfo {
 
 function Home({ onLogout }: HomeProps) {
     const navigate = useNavigate()
+    const { hasPermission } = usePermissions()
     const [searchTerm, setSearchTerm] = useState('')
     const [tables, setTables] = useState<TableInfo[]>([])
     const [loading, setLoading] = useState(true)
@@ -36,9 +38,10 @@ function Home({ onLogout }: HomeProps) {
         }
     }
 
-    const filteredTables = tables.filter(table =>
-        table.tableName.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    // Filtra tabelas baseado em permissões e termo de busca
+    const filteredTables = tables
+        .filter(table => hasPermission(table.tableName, 'view'))
+        .filter(table => table.tableName.toLowerCase().includes(searchTerm.toLowerCase()))
 
     const handleTableClick = (tableName: string) => {
         navigate(`/table/${tableName}`)

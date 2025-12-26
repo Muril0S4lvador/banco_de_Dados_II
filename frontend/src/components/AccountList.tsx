@@ -1,15 +1,20 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
+import { usePermissions } from '../contexts/PermissionContext'
 import Header from './Header'
 import { accountService, Account } from '../services/accountService'
 import './TableView.css'
 
 export default function AccountList() {
     const { logout } = useAuthContext()
+    const { hasPermission } = usePermissions()
     const navigate = useNavigate()
     const [items, setItems] = useState<Account[]>([])
     const [loading, setLoading] = useState(true)
+
+    const canEdit = hasPermission('account', 'edit')
+    const canDelete = hasPermission('account', 'delete')
 
     useEffect(() => {
         loadItems()
@@ -59,11 +64,13 @@ export default function AccountList() {
                         <h1>Contas</h1>
                         <p>{items.length} conta(s) cadastrada(s)</p>
                     </div>
-                    <div className="table-actions">
-                        <button className="btn-create-item" onClick={handleCreate}>
-                            Criar Conta
-                        </button>
-                    </div>
+                    {canEdit && (
+                        <div className="table-actions">
+                            <button className="btn-create-item" onClick={handleCreate}>
+                                Criar Conta
+                            </button>
+                        </div>
+                    )}
                 </div>
 
                 <div className="table-view-content">
@@ -72,9 +79,11 @@ export default function AccountList() {
                     ) : items.length === 0 ? (
                         <div className="no-items">
                             <p>Nenhuma conta cadastrada</p>
-                            <button className="btn-create-first" onClick={handleCreate}>
-                                Criar Primeira Conta
-                            </button>
+                            {canEdit && (
+                                <button className="btn-create-first" onClick={handleCreate}>
+                                    Criar Primeira Conta
+                                </button>
+                            )}
                         </div>
                     ) : (
                         <div className="table-wrapper">
@@ -84,7 +93,7 @@ export default function AccountList() {
                                         <th>Número da Conta</th>
                                         <th>Agência</th>
                                         <th>Saldo</th>
-                                        <th className="actions-column">Ações</th>
+                                        {canDelete && <th className="actions-column">Ações</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -95,18 +104,20 @@ export default function AccountList() {
                                             <td className="table-row-clickable" onClick={() => handleRowClick(item)}>
                                                 {item.balance !== undefined ? item.balance : '-'}
                                             </td>
-                                            <td className="actions-cell">
-                                                <button
-                                                    className="btn-delete-item"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation()
-                                                        handleDelete(item)
-                                                    }}
-                                                    title="Deletar conta"
-                                                >
-                                                    Excluir
-                                                </button>
-                                            </td>
+                                            {canDelete && (
+                                                <td className="actions-cell">
+                                                    <button
+                                                        className="btn-delete-item"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation()
+                                                            handleDelete(item)
+                                                        }}
+                                                        title="Deletar conta"
+                                                    >
+                                                        Excluir
+                                                    </button>
+                                                </td>
+                                            )}
                                         </tr>
                                     ))}
                                 </tbody>

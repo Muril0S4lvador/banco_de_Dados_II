@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
+import { useAuthContext } from '../contexts/AuthContext'
 import './Header.css'
 
 interface HeaderProps {
@@ -9,6 +10,10 @@ interface HeaderProps {
 function Header({ onLogout }: HeaderProps) {
     const [showProfileMenu, setShowProfileMenu] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
+    const { user } = useAuthContext()
+
+    // Verifica se o usuário é admin
+    const isAdmin = user?.roleIds?.includes('admin')
 
     // Fecha o menu ao clicar fora dele
     useEffect(() => {
@@ -35,8 +40,12 @@ function Header({ onLogout }: HeaderProps) {
 
                 {/* Navigation */}
                 <nav className="header-nav">
-                    <Link to="/roles" className="nav-item">Roles</Link>
-                    <Link to="/users" className="nav-item">Users</Link>
+                    {isAdmin && (
+                        <>
+                            <Link to="/roles" className="nav-item">Roles</Link>
+                            <Link to="/users" className="nav-item">Users</Link>
+                        </>
+                    )}
 
                     {/* Profile Menu */}
                     <div className="profile-menu-container" ref={menuRef}>

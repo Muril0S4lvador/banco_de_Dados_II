@@ -1,6 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuthContext } from './contexts/AuthContext'
+import { PermissionProvider } from './contexts/PermissionContext'
 import ProtectedRoute from './components/ProtectedRoute'
+import AdminRoute from './components/AdminRoute'
 import Login from './components/Login'
 import Home from './components/Home'
 import Profile from './components/Profile'
@@ -78,7 +80,9 @@ function AppContent() {
                     path="/roles"
                     element={
                         <ProtectedRoute>
-                            <RolesList />
+                            <AdminRoute>
+                                <RolesList />
+                            </AdminRoute>
                         </ProtectedRoute>
                     }
                 />
@@ -87,7 +91,9 @@ function AppContent() {
                     path="/role"
                     element={
                         <ProtectedRoute>
-                            <RoleForm />
+                            <AdminRoute>
+                                <RoleForm />
+                            </AdminRoute>
                         </ProtectedRoute>
                     }
                 />
@@ -96,7 +102,9 @@ function AppContent() {
                     path="/role/:roleId"
                     element={
                         <ProtectedRoute>
-                            <RoleView />
+                            <AdminRoute>
+                                <RoleView />
+                            </AdminRoute>
                         </ProtectedRoute>
                     }
                 />
@@ -105,7 +113,9 @@ function AppContent() {
                     path="/users"
                     element={
                         <ProtectedRoute>
-                            <UsersList />
+                            <AdminRoute>
+                                <UsersList />
+                            </AdminRoute>
                         </ProtectedRoute>
                     }
                 />
@@ -114,7 +124,9 @@ function AppContent() {
                     path="/user"
                     element={
                         <ProtectedRoute>
-                            <Users />
+                            <AdminRoute>
+                                <Users />
+                            </AdminRoute>
                         </ProtectedRoute>
                     }
                 />
@@ -123,7 +135,9 @@ function AppContent() {
                     path="/user/:userId"
                     element={
                         <ProtectedRoute>
-                            <UserView />
+                            <AdminRoute>
+                                <UserView />
+                            </AdminRoute>
                         </ProtectedRoute>
                     }
                 />
@@ -284,7 +298,9 @@ function AppContent() {
 function App() {
     return (
         <AuthProvider>
-            <AppContent />
+            <PermissionProvider>
+                <AppContent />
+            </PermissionProvider>
         </AuthProvider>
     )
 }

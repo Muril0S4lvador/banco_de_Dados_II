@@ -1,97 +1,99 @@
-import { DescribeTableCommand, KeySchemaElement } from '@aws-sdk/client-dynamodb';
-import { DeleteCommand, GetCommand, PutCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
-import { dynamoDBClient } from '../config/database';
-import { Permission, PermissionEntity } from '../entity/Permission';
+import { PutCommand, GetCommand, DeleteCommand, ScanCommand, UpdateCommand } from "@aws-sdk/lib-dynamodb"
+import { dynamoDBClient } from "../config/database"
+import { Permission } from "../entity/Permission"
 
 export class PermissionRepository {
-    private tableName: string = 'Permissions';
+    private tableName = 'Permissions'
 
-    private async getKeySchema(): Promise<KeySchemaElement[]> {
-        const describe = new DescribeTableCommand({ TableName: this.tableName });
-        const result = await dynamoDBClient.send(describe);
-        return result.Table?.KeySchema || [];
+    async create(permission: Omit<Permission, '__id'>): Promise<Permission> {
+        const id = `${permission.roleId}::${permission.tableName}`
+        const item = {
+            ...permission,
+            __id: id
+        }
+
+        const command = new PutCommand({
+            TableName: this.tableName,
+            Item: item
+        })
+
+        await dynamoDBClient.send(command)
+        return item as Permission
     }
 
-    private buildItemId(item: Record<string, any>, keySchema: KeySchemaElement[]): string {
-        if (!keySchema || keySchema.length === 0) return '';
-        const hashKey = keySchema.find(k => k.KeyType === 'HASH')?.AttributeName;
-        const rangeKey = keySchema.find(k => k.KeyType === 'RANGE')?.AttributeName;
+    async getById(id: string): Promise<Permission | null> {
+        const command = new GetCommand({
+            TableName: this.tableName,
+            Key: { __id: id }
+        })
 
-        const parts: string[] = [];
-        if (hashKey) parts.push(String(item[hashKey] ?? ''));
-        if (rangeKey) parts.push(String(item[rangeKey] ?? ''));
-
-        return parts.filter(Boolean).join('::');
+        const result = await dynamoDBClient.send(command)
+        return result.Item as Permission || null
     }
 
-    private buildKeyFromItemId(itemId: string, keySchema: KeySchemaElement[]): Record<string, any> {
-        const hashKey = keySchema.find(k => k.KeyType === 'HASH')?.AttributeName;
-        const rangeKey = keySchema.find(k => k.KeyType === 'RANGE')?.AttributeName;
-
-        const parts = itemId.split('::');
-        const key: Record<string, any> = {};
-
-        if (hashKey) key[hashKey] = parts[0];
-        if (rangeKey && parts.length > 1) key[rangeKey] = parts[1];
-
-        return key;
+    async getByRoleAndTable(roleId: string, tableName: string): Promise<Permission | null> {
+        const id = `${roleId}::${tableName}`
+        return this.getById(id)
     }
 
-    async list(): Promise<Array<Permission & { __id: string }>> {
-        const keySchema = await this.getKeySchema();
-        const command = new ScanCommand({ TableName: this.tableName });
-        const result = await dynamoDBClient.send(command);
+    async listByRole(roleId: string): Promise<Permission[]> {
+        const command = new ScanCommand({
+            TableName: this.tableName,
+            FilterExpression: 'roleId = :roleId',
+            ExpressionAttributeValues: {
+                ':roleId': roleId
+            }
+        })
 
-        return (result.Items || []).map((item: any) => ({
-            ...item,
-            __id: this.buildItemId(item, keySchema),
-        })) as Array<Permission & { __id: string }>;
+        const result = await dynamoDBClient.send(command)
+        return result.Items as Permission[] || []
     }
 
-    async getById(itemId: string): Promise<(Permission & { __id: string }) | null> {
-        const keySchema = await this.getKeySchema();
-        const key = this.buildKeyFromItemId(itemId, keySchema);
-        const command = new GetCommand({ TableName: this.tableName, Key: key });
-        const result = await dynamoDBClient.send(command);
-        if (!result.Item) return null;
+    async list(): Promise<Permission[]> {
+        const command = new ScanCommand({
+            TableName: this.tableName
+        })
 
-        return {
-            ...(result.Item as Permission),
-            __id: this.buildItemId(result.Item, keySchema),
-        } as Permission & { __id: string };
+        const result = await dynamoDBClient.send(command)
+        return result.Items as Permission[] || []
     }
 
-    async create(itemData: Partial<Permission>): Promise<Permission & { __id: string }> {
-        const permissionEntity = new PermissionEntity(itemData);
+    async update(id: string, updates: Partial<Permission>): Promise<Permission> {
+        const updateExpressions: string[] = []
+        const expressionAttributeValues: any = {}
+        const expressionAttributeNames: any = {}
 
-        const keySchema = await this.getKeySchema();
-        const withKeys = permissionEntity.toDynamoDB();
-        const command = new PutCommand({ TableName: this.tableName, Item: withKeys });
-        await dynamoDBClient.send(command);
+        Object.entries(updates).forEach(([key, value]) => {
+            if (key !== '__id' && key !== 'roleId' && key !== 'tableName') {
+                updateExpressions.push(`#${key} = :${key}`)
+                expressionAttributeValues[`:${key}`] = value
+                expressionAttributeNames[`#${key}`] = key
+            }
+        })
 
-        return {
-            ...(withKeys as Permission),
-            __id: this.buildItemId(withKeys, keySchema),
-        } as Permission & { __id: string };
+        if (updateExpressions.length === 0) {
+            throw new Error('No valid fields to update')
+        }
+
+        const command = new UpdateCommand({
+            TableName: this.tableName,
+            Key: { __id: id },
+            UpdateExpression: `SET ${updateExpressions.join(', ')}`,
+            ExpressionAttributeValues: expressionAttributeValues,
+            ExpressionAttributeNames: expressionAttributeNames,
+            ReturnValues: 'ALL_NEW'
+        })
+
+        const result = await dynamoDBClient.send(command)
+        return result.Attributes as Permission
     }
 
-    async update(itemId: string, itemData: Partial<Permission>): Promise<Permission & { __id: string }> {
-        const keySchema = await this.getKeySchema();
-        const key = this.buildKeyFromItemId(itemId, keySchema);
-        const merged = { ...itemData, ...key } as Record<string, any>;
-        const command = new PutCommand({ TableName: this.tableName, Item: merged });
-        await dynamoDBClient.send(command);
+    async delete(id: string): Promise<void> {
+        const command = new DeleteCommand({
+            TableName: this.tableName,
+            Key: { __id: id }
+        })
 
-        return {
-            ...(merged as Permission),
-            __id: this.buildItemId(merged, keySchema),
-        } as Permission & { __id: string };
-    }
-
-    async delete(itemId: string): Promise<void> {
-        const keySchema = await this.getKeySchema();
-        const key = this.buildKeyFromItemId(itemId, keySchema);
-        const command = new DeleteCommand({ TableName: this.tableName, Key: key });
-        await dynamoDBClient.send(command);
+        await dynamoDBClient.send(command)
     }
 }

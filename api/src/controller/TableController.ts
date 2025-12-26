@@ -4,6 +4,8 @@ import { ScanCommand } from "@aws-sdk/lib-dynamodb";
 import { RouteResponse } from "../helpers/RouteResponse";
 import { dynamoDBBaseClient, dynamoDBClient } from "../config/database";
 
+const internalTables = ['Users', 'Roles', 'Tokens'];
+
 export class TableController {
     /**
      * @swagger
@@ -47,7 +49,7 @@ export class TableController {
             const listCommand = new ListTablesCommand({});
             const listResult = await dynamoDBBaseClient.send(listCommand);
 
-            const tableNames = listResult.TableNames || [];
+            const tableNames = listResult.TableNames?.filter((name: string) => !internalTables.includes(name)) || [];
             const tablesWithCount = [];
 
             // Para cada tabela, busca a contagem de itens
@@ -118,7 +120,7 @@ export class TableController {
             const command = new ListTablesCommand({});
             const result = await dynamoDBBaseClient.send(command);
 
-            const tableNames = result.TableNames || [];
+            const tableNames = result.TableNames?.filter((name: string) => !internalTables.includes(name)) || [];
             tableNames.sort();
 
             return RouteResponse.success(res, tableNames, 'Nomes das tabelas listados com sucesso');
