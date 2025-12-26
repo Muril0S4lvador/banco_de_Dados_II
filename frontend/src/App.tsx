@@ -14,7 +14,6 @@ import Users from './components/Users'
 import UsersList from './components/UsersList'
 import UserView from './components/UserView'
 import Table from './components/Table'
-import TableItemForm from './components/TableItemForm'
 import AccountList from './components/AccountList'
 import AccountForm from './components/AccountForm'
 import BorrowerList from './components/BorrowerList'
@@ -151,15 +150,6 @@ function AppContent() {
                     }
                 />
 
-                {/* <Route
-                    path="/table/:tableName"
-                    element={
-                        <ProtectedRoute>
-                            <TableView />
-                        </ProtectedRoute>
-                    }
-                /> */}
-
                 {/* Rotas de formulários específicos para cada entidade */}
                 <Route
                     path="/table/account/:itemId"
@@ -206,16 +196,6 @@ function AppContent() {
                     element={
                         <ProtectedRoute>
                             <DepositorForm />
-                        </ProtectedRoute>
-                    }
-                />
-
-                {/* Rota genérica para outras tabelas */}
-                <Route
-                    path="/table/:tableName/:itemId"
-                    element={
-                        <ProtectedRoute>
-                            <TableItemForm />
                         </ProtectedRoute>
                     }
                 />
