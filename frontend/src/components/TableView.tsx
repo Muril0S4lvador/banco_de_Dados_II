@@ -4,7 +4,7 @@ import { useAuthContext } from '../contexts/AuthContext'
 import Header from './Header'
 import './TableView.css'
 import { listItems, deleteItem } from '../services/tableItemService'
-import axios from 'axios'
+import api from '../lib/axios'
 
 interface TableItem {
     [key: string]: any
@@ -16,47 +16,71 @@ interface TableSchema {
     attributeDefinitions?: Array<{ AttributeName: string; AttributeType: string }>
 }
 
-function TableView() {
+export interface EntityField {
+    name: string
+    label: string
+}
+
+export interface EntityListConfig {
+    title: string
+    entityPath: string
+    fields: EntityField[]
+    baseRoute: string
+}
+
+interface Props {
+    config?: EntityListConfig
+}
+
+function TableView({ config }: Props) {
     const { tableName } = useParams<{ tableName: string }>()
     const navigate = useNavigate()
     const { logout } = useAuthContext()
 
+    const configTableName = config?.entityPath?.toLowerCase()
+    const normalizedTableName = (configTableName || tableName || '').toLowerCase()
+    const [apiTableName, setApiTableName] = useState<string>('')
+
     const [items, setItems] = useState<TableItem[]>([])
-    const [columns, setColumns] = useState<string[]>([])
+    const [columns, setColumns] = useState<Array<{ name: string, label: string }>>([])
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
     const [tableSchema, setTableSchema] = useState<TableSchema | null>(null)
+    const displayTitle = config?.title ?? tableName
 
     // Carregar schema da tabela
     useEffect(() => {
         const loadTableSchema = async () => {
             try {
-                const response = await axios.get(`${window.location.origin}/tables`)
-                const tables: TableSchema[] = response.data
-                const schema = tables.find((t: TableSchema) => t.name === tableName)
+                const response = await api.get('/tables')
+                const tables: TableSchema[] = response.data?.data || []
+                const schema = tables.find((t: TableSchema) => t.name.toLowerCase() === normalizedTableName)
                 setTableSchema(schema || null)
+                setApiTableName(schema?.name || normalizedTableName)
             } catch (err) {
                 console.error('Erro ao carregar schema da tabela:', err)
+                setApiTableName(normalizedTableName)
             }
         }
         loadTableSchema()
-    }, [tableName])
+    }, [tableName, normalizedTableName])
 
     // Carregar itens da tabela
     useEffect(() => {
         const loadItems = async () => {
-            if (!tableName) return
+            if (!apiTableName) return
 
             setLoading(true)
             setError(null)
 
             try {
-                const response = await listItems(tableName)
+                const response = await listItems(apiTableName)
                 const loadedItems = response.items || []
                 setItems(loadedItems)
 
-                // Definir colunas baseado nos itens ou schema
-                if (loadedItems.length > 0) {
+                if (config?.fields && config.fields.length > 0) {
+                    setColumns(config.fields.map(f => ({ name: f.name, label: f.label })))
+                } else if (loadedItems.length > 0) {
                     // Coletar todas as chaves únicas de todos os itens
                     const allKeys = new Set<string>()
                     loadedItems.forEach(item => {
@@ -80,7 +104,8 @@ function TableView() {
                     }
 
                     const remainingColumns = Array.from(allKeys).sort()
-                    setColumns([...orderedColumns, ...remainingColumns])
+                    const merged = [...orderedColumns, ...remainingColumns]
+                    setColumns(merged.map(name => ({ name, label: name })))
                 } else {
                     setColumns([])
                 }
@@ -93,12 +118,12 @@ function TableView() {
         }
 
         loadItems()
-    }, [tableName, tableSchema])
+    }, [apiTableName, tableSchema, config?.fields])
 
     const handleRowClick = (item: TableItem) => {
         const itemId = item.__id
         if (!itemId) return
-        navigate(`/table/${tableName}/${itemId}`)
+        navigate(`/table/${(config?.entityPath || tableName || '').toLowerCase()}/${itemId}`)
     }
 
     const handleDeleteItem = async (item: TableItem, e: React.MouseEvent) => {
@@ -108,9 +133,9 @@ function TableView() {
 
         if (confirm(`Deseja realmente excluir o item ${itemId}?`)) {
             try {
-                await deleteItem(tableName!, itemId)
+                await deleteItem(apiTableName!, itemId)
                 // Recarregar itens
-                const response = await listItems(tableName!)
+                const response = await listItems(apiTableName!)
                 setItems(response.items || [])
             } catch (err: any) {
                 console.error('Erro ao excluir item:', err)
@@ -120,14 +145,14 @@ function TableView() {
     }
 
     const handleCreateItem = () => {
-        navigate(`/table/${tableName}/new`)
+        navigate(`/table/${(config?.entityPath || tableName || '').toLowerCase()}/new`)
     }
 
     const handleDeleteTable = async () => {
         if (confirm(`ATENÇÃO: Deseja realmente excluir a tabela "${tableName}" e todos os seus dados?\n\nEsta ação não pode ser desfeita!`)) {
             try {
-                await axios.delete(`${window.location.origin}/tables/${tableName}`)
-                alert(`Tabela "${tableName}" excluída com sucesso!`)
+                await api.delete(`/tables/${apiTableName}`)
+                alert(`Tabela "${apiTableName}" excluída com sucesso!`)
                 navigate('/home')
             } catch (err: any) {
                 console.error('Erro ao excluir tabela:', err)
@@ -164,7 +189,7 @@ function TableView() {
             <div className="table-view-container">
                 <div className="table-view-header">
                     <div>
-                        <h1>{tableName}</h1>
+                        <h1>{displayTitle}</h1>
                         <p>{items.length} {items.length === 1 ? 'item' : 'itens'} na tabela</p>
                     </div>
                     <div className="table-actions">
@@ -205,7 +230,7 @@ function TableView() {
                                     <tr>
                                         <th className="actions-column">Ações</th>
                                         {columns.map((column) => (
-                                            <th key={column}>{column}</th>
+                                            <th key={column.name}>{column.label}</th>
                                         ))}
                                     </tr>
                                 </thead>
@@ -229,10 +254,10 @@ function TableView() {
                                                 </button>
                                             </td>
                                             {columns.map((column) => (
-                                                <td key={column}>
-                                                    {typeof item[column] === 'object'
-                                                        ? JSON.stringify(item[column])
-                                                        : item[column]?.toString() || '-'}
+                                                <td key={column.name}>
+                                                    {typeof item[column.name] === 'object'
+                                                        ? JSON.stringify(item[column.name])
+                                                        : item[column.name]?.toString() || '-'}
                                                 </td>
                                             ))}
                                         </tr>
