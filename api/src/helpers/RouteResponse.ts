@@ -5,10 +5,16 @@ export class RouteResponse {
      * Resposta da requisição caso tenha sido concluída com sucesso
      * @param res Variável Response do express
      * @param content Conteúdo a ser retornado
+     * @param message Mensagem opcional de sucesso
+     * @param statusCode Status code opcional (padrão 200)
      * @returns Resposta da requisição
      */
-    public static success(res: Response, content: any) {
-        return res.status(200).json({ success: true, data: content });
+    public static success(res: Response, content: any, message?: string, statusCode: number = 200) {
+        const response: any = { success: true, data: content };
+        if (message) {
+            response.message = message;
+        }
+        return res.status(statusCode).json(response);
     }
 
     /**
@@ -34,10 +40,11 @@ export class RouteResponse {
      * Resposta da requisição caso tenha sido concluída com um erro genérico
      * @param res Variável Response do express
      * @param message Mensagem a ser retornada, por padrão a mensagem é 'Bad Request'
+     * @param statusCode Status code opcional (padrão 400)
      * @returns Resposta da requisição
      */
-    public static error(res: Response, message?: string) {
-        return res.status(400).json({ message: message || "Bad Request" });
+    public static error(res: Response, message?: string, statusCode: number = 400) {
+        return res.status(statusCode).json({ success: false, message: message || "Bad Request" });
     }
 
     /**

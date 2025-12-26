@@ -1,4 +1,4 @@
-import { GetCommand, PutCommand, DeleteCommand, QueryCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand, DeleteCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb';
 import { dynamoDBClient } from '../config/database';
 import { Token, TokenEntity } from '../entity/Token';
 
@@ -7,6 +7,17 @@ import { Token, TokenEntity } from '../entity/Token';
  */
 export class TokenRepository {
     private tableName: string = 'Tokens';
+
+    private buildItemId(item: Record<string, any>): string {
+        const userId = item.userId ?? '';
+        const token = item.token ?? '';
+        return [userId, token].filter(Boolean).join('::');
+    }
+
+    private buildKeyFromItemId(itemId: string): { userId: string; token: string } {
+        const [userId, token] = itemId.split('::');
+        return { userId, token };
+    }
 
     /**
      * Busca um token pelo valor do token usando GSI
@@ -47,6 +58,17 @@ export class TokenRepository {
     }
 
     /**
+     * Lista todos os tokens (scan)
+     */
+    async list(): Promise<Array<Token & { __id: string }>> {
+        const command = new ScanCommand({ TableName: this.tableName });
+
+        const result = await dynamoDBClient.send(command);
+        const items = result.Items || [];
+        return items.map(item => ({ ...(item as Token), __id: this.buildItemId(item) }));
+    }
+
+    /**
      * Cria um novo token
      */
     async createToken(tokenData: Partial<Token>): Promise<TokenEntity> {
@@ -64,6 +86,14 @@ export class TokenRepository {
             console.error('Error creating token:', error);
             throw error;
         }
+    }
+
+    /**
+     * Cria token em modo CRUD comum
+     */
+    async create(itemData: Partial<Token>): Promise<Token & { __id: string }> {
+        const tokenEntity = await this.createToken(itemData);
+        return { ...tokenEntity, __id: this.buildItemId(tokenEntity) } as Token & { __id: string };
     }
 
     /**
@@ -97,6 +127,16 @@ export class TokenRepository {
             console.error('Error finding token by userId and token:', error);
             throw error;
         }
+    }
+
+    /**
+     * Busca token pelo itemId (userId::token)
+     */
+    async getById(itemId: string): Promise<(Token & { __id: string }) | null> {
+        const { userId, token } = this.buildKeyFromItemId(itemId);
+        const found = await this.findTokenByUserIdAndToken(userId, token);
+        if (!found) return null;
+        return { ...found, __id: this.buildItemId(found) } as Token & { __id: string };
     }
 
     /**
@@ -146,6 +186,30 @@ export class TokenRepository {
             console.error('Error deleting token:', error);
             throw error;
         }
+    }
+
+    /**
+     * Deleta token pelo itemId (userId::token)
+     */
+    async deleteById(itemId: string): Promise<boolean> {
+        const { userId, token } = this.buildKeyFromItemId(itemId);
+        return this.deleteToken(userId, token);
+    }
+
+    /**
+     * Atualiza token (sobrescreve) pelo itemId
+     */
+    async update(itemId: string, itemData: Partial<Token>): Promise<Token & { __id: string }> {
+        const { userId, token } = this.buildKeyFromItemId(itemId);
+        const merged = new TokenEntity({ userId, token, ...itemData });
+
+        const command = new PutCommand({
+            TableName: this.tableName,
+            Item: merged.toDynamoDB(),
+        });
+
+        await dynamoDBClient.send(command);
+        return { ...merged, __id: this.buildItemId(merged) } as Token & { __id: string };
     }
 
     /**

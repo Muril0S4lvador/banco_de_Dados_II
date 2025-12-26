@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useAuthContext } from '../contexts/AuthContext'
 import Header from './Header'
 import './Profile.css'
+import { userService } from '../services/userService'
 
 function Profile() {
     const { user, logout } = useAuthContext()
@@ -11,7 +12,7 @@ function Profile() {
     const [showNewPassword, setShowNewPassword] = useState(false)
     const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-    const handleChangePassword = (e: React.FormEvent) => {
+    const handleChangePassword = async (e: React.FormEvent) => {
         e.preventDefault()
 
         // Validações
@@ -30,14 +31,20 @@ function Profile() {
             return
         }
 
-        // Preparar dados para envio (futuramente será enviado para a API)
         const passwordData = {
             userId: user?.userId,
             newPassword
         }
 
-        console.log('Troca de senha:', passwordData)
-        alert('Senha alterada com sucesso! (Frontend apenas)')
+        try {
+            if(!user || !user.userId) throw new Error('Usuário não autenticado');
+            await userService.changePassword(user?.userId, passwordData);
+            alert('Senha atualizada com sucesso!');
+        } catch (error: any) {
+            console.error('Erro ao alterar senha do usuário:', error)
+            const errorMessage = error.response?.data?.message || 'Erro ao alterar senha do usuário. Tente novamente.'
+            alert(errorMessage)
+        }
 
         // Resetar formulário
         setNewPassword('')

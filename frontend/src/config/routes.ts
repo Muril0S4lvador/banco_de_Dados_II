@@ -16,6 +16,8 @@ export const PRIVATE_ROUTES = [
     '/users',
     '/roles',
     '/permissions',
+    '/table',
+    '/accounts',
 ]
 
 /**

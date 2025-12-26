@@ -29,6 +29,14 @@ const app = express();
 app.use(express.json({ limit: '500mb' }));
 app.use(express.urlencoded({ limit: '500mb', extended: true }));
 
+// Retorna 400 para corpo JSON inválido
+app.use((err: any, _req: Request, res: Response, next: Function) => {
+    if (err instanceof SyntaxError && 'body' in err) {
+        return res.status(400).json({ success: false, message: 'JSON inválido no corpo da requisição' });
+    }
+    next(err);
+});
+
 app.use(cors({ origin: true }));
 app.use(router);
 

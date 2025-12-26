@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useAuthContext } from '../contexts/AuthContext'
 import Header from './Header'
 import './TableItemForm.css'
+import { createItem, getItem, updateItem } from '../services/tableItemService'
 
 interface ItemAttribute {
     id: string
@@ -33,6 +34,51 @@ function TableItemForm() {
     const [attributes, setAttributes] = useState<ItemAttribute[]>([
         { id: '1', name: '', type: 'S', value: '' }
     ])
+    const [loading, setLoading] = useState<boolean>(false)
+
+    useEffect(() => {
+        const loadItem = async () => {
+            if (!isEditMode || !tableName || !itemId) return
+            try {
+                setLoading(true)
+                const item = await getItem(tableName, itemId)
+                const loadedAttributes: ItemAttribute[] = Object.entries(item)
+                    .filter(([key]) => key !== '__id')
+                    .map(([key, value], idx) => {
+                        const valueType = (() => {
+                            if (value === null) return 'NULL'
+                            if (Array.isArray(value)) return 'L'
+                            if (typeof value === 'object') return 'M'
+                            if (typeof value === 'boolean') return 'BOOL'
+                            if (typeof value === 'number') return 'N'
+                            return 'S'
+                        })()
+
+                        const serializedValue = (() => {
+                            if (value === null) return ''
+                            if (typeof value === 'object') return JSON.stringify(value)
+                            return String(value)
+                        })()
+
+                        return {
+                            id: `${idx}-${key}`,
+                            name: key,
+                            type: valueType,
+                            value: serializedValue,
+                        }
+                    })
+
+                setAttributes(loadedAttributes.length > 0 ? loadedAttributes : [{ id: '1', name: '', type: 'S', value: '' }])
+            } catch (err: any) {
+                console.error('Erro ao carregar item:', err)
+                alert(err?.response?.data?.message || 'Erro ao carregar item')
+            } finally {
+                setLoading(false)
+            }
+        }
+
+        loadItem()
+    }, [isEditMode, tableName, itemId])
 
     const handleAddAttribute = () => {
         const newAttribute: ItemAttribute = {
@@ -68,7 +114,7 @@ function TableItemForm() {
         ))
     }
 
-    const handleSave = (e: React.FormEvent) => {
+    const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
 
         // Validações
@@ -84,7 +130,7 @@ function TableItemForm() {
             return
         }
 
-        // Preparar dados para envio (futuramente será enviado para a API)
+        // Preparar dados para envio
         const itemData: { [key: string]: any } = {}
         attributes.forEach(attr => {
             if (attr.type === 'N') {
@@ -107,10 +153,21 @@ function TableItemForm() {
             }
         })
 
-        console.log('Item salvo:', { table: tableName, data: itemData })
-        alert(`Item ${isEditMode ? 'atualizado' : 'criado'} com sucesso! (Frontend apenas)`)
-
-        navigate(`/table/${tableName}`)
+        try {
+            setLoading(true)
+            if (isEditMode) {
+                await updateItem(tableName!, itemId!, itemData)
+            } else {
+                await createItem(tableName!, itemData)
+            }
+            alert(`Item ${isEditMode ? 'atualizado' : 'criado'} com sucesso!`)
+            navigate(`/table/${tableName}`)
+        } catch (err: any) {
+            console.error('Erro ao salvar item:', err)
+            alert(err?.response?.data?.message || 'Erro ao salvar item')
+        } finally {
+            setLoading(false)
+        }
     }
 
     return (
@@ -209,8 +266,8 @@ function TableItemForm() {
                         <button type="button" className="btn-cancel" onClick={() => navigate(`/table/${tableName}`)}>
                             Cancelar
                         </button>
-                        <button type="submit" className="btn-submit">
-                            {isEditMode ? 'Atualizar Item' : 'Criar Item'}
+                        <button type="submit" className="btn-submit" disabled={loading}>
+                            {loading ? 'Salvando...' : isEditMode ? 'Atualizar Item' : 'Criar Item'}
                         </button>
                     </div>
                 </form>
