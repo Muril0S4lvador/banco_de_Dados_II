@@ -1,0 +1,14 @@
+# Dependências Python para MongoDB Client
+
+# Driver do MongoDB para Python
+pymongo>=4.6.0
+
+# Interface gráfica moderna
+customtkinter>=5.2.0
+
+# Dependências do CustomTkinter (versões compatíveis com Python 3.14)
+Pillow>=10.4.0
+darkdetect>=0.8.0
+
+# Utilitários
+python-dotenv>=1.0.0

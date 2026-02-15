@@ -1,0 +1,115 @@
+# ========================================
+# .gitignore - MongoDB PokeAPI Project
+# ========================================
+
+# ========================================
+# Arquivos de Ambiente e Credenciais
+# ========================================
+.env
+*.env
+!.env.example
+
+# ========================================
+# Dados do MongoDB
+# ========================================
+data/
+mongo-data/
+db/
+
+# ========================================
+# Logs
+# ========================================
+*.log
+logs/
+mongo-logs/
+
+# ========================================
+# Docker
+# ========================================
+# Não ignorar docker-compose.yml - é necessário para o projeto
+
+# ========================================
+# Sistema Operacional
+# ========================================
+# Windows
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+.directory
+
+# ========================================
+# IDEs e Editores
+# ========================================
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# JetBrains IDEs
+.idea/
+*.iml
+*.iws
+*.ipr
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# ========================================
+# Node.js (caso adicione aplicação)
+# ========================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ========================================
+# Python (caso adicione scripts)
+# ========================================
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+.env/
+
+# ========================================
+# Backups e Temporários
+# ========================================
+*.bak
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Dumps do MongoDB
+*.dump
+dump/
+
+# ========================================
+# Arquivos Sensíveis
+# ========================================
+# Chaves privadas
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Certificados
+!docker/certs/.gitkeep
+
+# ========================================
+# Documentação Temporária
+# ========================================
+# Arquivos de rascunho
+NOTES.md
+TODO.md
+SCRATCH.md
