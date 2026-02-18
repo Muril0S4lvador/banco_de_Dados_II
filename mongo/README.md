@@ -1,572 +1,1029 @@
-# ========================================
-# MongoDB Authentication & Authorization
-# Sistema de Controle de Acesso com Roles
-# ========================================
-
-## 📋 Visão Geral
-
-Este projeto implementa um sistema completo de **autenticação**, **autorização** e **ingestão automática de dados** utilizando os mecanismos nativos do MongoDB em ambiente Docker. O projeto simula um ambiente realista de banco de dados com controle de acesso granular baseado em roles (papéis), similar aos SGBDs relacionais e serviços gerenciados como MongoDB Atlas.
-
-### 🎯 Objetivos do Projeto
-
-- ✅ Implementar autenticação nativa do MongoDB com múltiplos usuários
-- ✅ Criar roles customizados com permissões granulares
-- ✅ Inicialização automática de dados via Docker
-- ✅ Interface gráfica para validação de permissões em tempo real
-- ✅ Demonstrar operações permitidas e negadas por role
-
-### 🏗️ Arquitetura da Solução
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         Docker Compose                          │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                 │
-│  ┌──────────────────────┐      ┌──────────────────────────┐  │
-│  │   MongoDB Container  │      │ Mongo Express (UI Web)   │  │
-│  │   - Port: 27017      │◄────►│   - Port: 8081           │  │
-│  │   - Auth Enabled     │      │   - Admin Interface      │  │
-│  └──────────────────────┘      └──────────────────────────┘  │
-│            │                                                   │
-│            │ Volume Mount                                      │
-│            ▼                                                   │
-│  ┌──────────────────────┐                                     │
-│  │  docker-entrypoint-  │                                     │
-│  │     initdb.d/        │                                     │
-│  │                      │                                     │
-│  │ 01-create-roles.js   │ ◄─── Executado na primeira         │
-│  │ 02-create-users.js   │      inicialização apenas          │
-│  │ 03-create-collections│                                     │
-│  │         .js          │                                     │
-│  └──────────────────────┘                                     │
-│                                                                 │
-└─────────────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-         ┌────────────────────────────────────┐
-         │   Python Client Application        │
-         │   (CustomTkinter GUI)              │
-         │                                    │
-         │   - Login com usuários/roles      │
-         │   - Terminal MongoDB interativo    │
-         │   - Validação de permissões       │
-         └────────────────────────────────────┘
-```
-
-## 🚀 Início Rápido
-
-### Pré-requisitos
-
-- Docker e Docker Compose instalados
-- Python 3.8+ (para a interface gráfica)
-- Git (para clonar o repositório)
-
-### 1. Iniciar o MongoDB
-
-```bash
-# Subir os containers
-docker-compose up -d
-
-# Verificar logs da inicialização
-docker-compose logs -f mongo
-```
-
-**Importante:** Os scripts de inicialização (`init-db/*.js`) são executados **apenas na primeira vez** que o container é criado. Para reinicializar:
-
-```bash
-# Parar e remover containers com volumes
-docker-compose down -v
-
-# Subir novamente (vai executar os scripts)
-docker-compose up -d
-```
-
-### 2. Instalar Dependências Python
-
-```bash
-# Criar ambiente virtual (recomendado)
-python -m venv venv
-
-# Ativar ambiente virtual
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# Instalar dependências
-pip install -r requirements.txt
-```
-
-### 3. Executar a Interface Gráfica
-
-```bash
-python mongo_client.py
-```
-
-## 👥 Usuários e Permissões
-
-### Usuário Root (Administrador do Sistema)
-
-| Usuário | Senha | Role | Descrição |
-|---------|-------|------|-----------|
-| `admin` | `admin` | `root` | ⚠️ **Administrador root** - TODAS as permissões (gerenciar usuários, roles, bancos) |
-
-### Usuários da Aplicação
-
-| Usuário | Senha | Role(s) | Permissões |
-|---------|-------|---------|------------|
-| `viewer` | `viewPass123` | `pokeReader` | Somente leitura em todas as coleções |
-| `dataEntry` | `entryPass123` | `pokeWriter` | Leitura, inserção e atualização (sem delete) |
-| `analyst` | `analystPass123` | `pokeAnalyst` | Leitura e estatísticas avançadas |
-| `restrictedUser` | `restrictPass123` | `pokemonsOnlyReader` | Leitura APENAS na coleção `pokemons` |
-
-> **⚠️ IMPORTANTE:** Apenas o usuário `admin` pode criar/gerenciar roles e usuários.
-
-### Roles Customizados
-
-#### 1. **pokeAdmin** - Administrador Completo
-```javascript
-{
-  privileges: [
-    {
-      resource: { db: "pokeAPI", collection: "" },
-      actions: [
-        "find", "insert", "update", "remove",
-        "createCollection", "dropCollection",
-        "createIndex", "dropIndex",
-        "collStats", "dbStats"
-      ]
-    }
-  ]
-}
-```
-
-#### 2. **pokeReader** - Leitor
-```javascript
-{
-  privileges: [
-    {
-      resource: { db: "pokeAPI", collection: "" },
-      actions: ["find", "collStats"]
-    }
-  ]
-}
-```
-
-#### 3. **pokeWriter** - Escritor (sem delete)
-```javascript
-{
-  privileges: [
-    {
-      resource: { db: "pokeAPI", collection: "" },
-      actions: ["find", "insert", "update", "collStats"]
-    }
-  ]
-}
-```
-
-#### 4. **pokeAnalyst** - Analista
-```javascript
-{
-  privileges: [
-    {
-      resource: { db: "pokeAPI", collection: "" },
-      actions: ["find", "collStats", "dbStats", "indexStats"]
-    }
-  ]
-}
-```
-
-#### 5. **pokemonsOnlyReader** - Leitor Restrito
-```javascript
-{
-  privileges: [
-    {
-      resource: { db: "pokeAPI", collection: "pokemons" },
-      actions: ["find"]
-    }
-  ]
-}
-```
-
-## 🧪 Testes e Validação
-
-### Teste 1: Login e Acesso Básico
-
-#### Teste com Usuário Admin (Sucesso Esperado)
-```bash
-# Na interface gráfica:
-Usuário: admin
-Senha: admin
-
-# No terminal MongoDB:
-> db.pokemons.find().limit(2)
-✓ Resultado: 2 documentos retornados
-
-> db.pokemons.insertOne({"name": "test", "type": "test"})
-✓ Resultado: Documento inserido com sucesso
-
-> show collections
-✓ Resultado: Mostra TODAS as coleções (incluindo system.users, system.roles)
-```
-
-#### Teste com Usuário Viewer (Negado para Insert)
-```bash
-# Na interface gráfica:
-Usuário: viewer
-Senha: viewPass123
-
-# No terminal MongoDB:
-> db.pokemons.find().limit(2)
-✓ Resultado: 2 documentos retornados (PERMITIDO)
-
-> db.pokemons.insertOne({"name": "test", "type": "test"})
-🚫 ACESSO NEGADO! Você não tem permissão para 'insert' na coleção 'pokemons'.
-```
-
-### Teste 2: Acesso Restrito a Coleções Específicas
-
-```bash
-# Login como restrictedUser
-Usuário: restrictedUser
-Senha: restrictPass123
-
-# Listar coleções disponíveis
-> show collections
-📁 Coleções com permissão de leitura (1):
-  - pokemons (1010 documentos)
-
-# Tentar acessar outra coleção (se existir)
-> db.outraColecao.find()
-🚫 ACESSO NEGADO!
-```
-
-### Teste 3: Operações de Escrita (Writer vs Reader)
-
-```bash
-# Login como dataEntry (Writer)
-Usuário: dataEntry
-Senha: entryPass123
-
-> db.pokemons.updateOne({"name": "pikachu"}, {"$set": {"level": 50}})
-✓ Resultado: 1 documento(s) atualizado(s)
-
-> db.pokemons.deleteOne({"name": "test"})
-🚫 ACESSO NEGADO! Você não tem permissão para 'remove'
-```
-
-### Teste 4: Verificação via mongosh (linha de comando)
-
-```bash
-# Conectar via mongosh como diferentes usuários
-mongosh "mongodb://viewer:viewPass123@localhost:27017/pokeAPI?authSource=pokeAPI"
-
-# Dentro do mongosh
-pokeAPI> db.pokemons.countDocuments()
-1010  // ✓ Permitido
-
-pokeAPI> db.pokemons.insertOne({name: "hack"})
-MongoServerError: not authorized  // ✓ Bloqueado corretamente
-```
-
-## 📊 Estrutura do Banco de Dados
-
-### Database: pokeAPI
-
-#### Coleção: pokemons
-Contém dados completos de Pokémons da PokéAPI com os seguintes campos:
-- `name`: Nome do Pokémon
-- `abilities`: Array de habilidades
-- `game_indices`: Jogos em que aparece
-- `height`: Altura
-- `weight`: Peso
-- `moves`: Array de movimentos
-- `types`: Array de tipos
-- `stats`: Estatísticas base
-- E muitos outros campos...
-
-**Total de documentos:** ~1010 Pokémons
-
-## 🔧 Comandos Úteis
-
-### Docker
-
-```bash
-# Iniciar containers
-docker-compose up -d
-
-# Ver logs
-docker-compose logs -f mongo
-
-# Parar containers
-docker-compose down
-
-# Resetar completamente (remove volumes)
-docker-compose down -v
-
-# Verificar status
-docker-compose ps
-
-# Entrar no container MongoDB
-docker exec -it mongo-pokeapi mongosh -u admin -p admin --authenticationDatabase admin
-```
-
-### MongoDB Shell (mongosh)
-
-```bash
-# Conectar como admin root
-mongosh "mongodb://admin:admin@localhost:27017/?authSource=admin"
-
-# Conectar como usuário da aplicação (exemplo: viewer)
-mongosh "mongodb://viewer:viewPass123@localhost:27017/pokeAPI?authSource=pokeAPI"
-
-# Verificar usuários
-use pokeAPI
-db.getUsers()
-
-# Verificar roles
-db.getRoles({showPrivileges: true})
-
-# Verificar permissões do usuário atual
-db.runCommand({connectionStatus: 1, showPrivileges: true})
-```
-
-### Python Client
-
-```bash
-# Executar interface gráfica
-python mongo_client.py
-
-# Com ambiente virtual
-venv\Scripts\activate  # Windows
-python mongo_client.py
-```
-
-## 🌐 Acessar Mongo Express (Interface Web)
-
-O Mongo Express é uma interface web para gerenciar o MongoDB:
-
-- **URL:** http://localhost:8081
-- **Usuário:** admin
-- **Senha:** admin
-
-⚠️ **Nota:** O Mongo Express usa o usuário root, então tem acesso completo ao banco.
-
-## 📁 Estrutura do Projeto
-
-```
-project-root/
-├── docker-compose.yml          # Configuração do Docker
-├── init-db/                    # Scripts de inicialização
-│   ├── 01-create-roles.js     # Criação de roles customizados
-│   ├── 02-create-users.js     # Criação de usuários
-│   └── 03-create-collections.js  # Criação de coleções e dados
-├── mongo_client.py            # Interface gráfica Python
-├── requirements.txt           # Dependências Python
-├── .env.example              # Exemplo de variáveis de ambiente
-├── README.md                 # Esta documentação
-├── ESPECIFICACAO.md          # Especificação do projeto
-└── AGENT.md                  # Plano de ação
-```
-
-## 🔐 Segurança
-
-### ⚠️ IMPORTANTE - Uso em Produção
-
-Este projeto usa credenciais hardcoded para fins **educacionais** e de **demonstração**. Para uso em produção:
-
-1. **Use variáveis de ambiente:**
-   ```bash
-   cp .env.example .env
-   # Edite .env com credenciais fortes
-   ```
-
-2. **Gere senhas fortes:**
-   ```bash
-   # Use geradores de senha
-   openssl rand -base64 32
-   ```
-
-3. **Nunca commite credenciais:**
-   ```bash
-   # Adicione ao .gitignore
-   echo ".env" >> .gitignore
-   ```
-
-4. **Use TLS/SSL:**
-   - Configure certificados SSL para o MongoDB
-   - Use conexões criptografadas
-
-5. **Limite acesso à rede:**
-   - Não exponha a porta 27017 publicamente
-   - Use firewall e VPN
-
-## 🐛 Troubleshooting
-
-### Problema: Scripts de inicialização não executam
-
-**Solução:** Os scripts só executam na primeira inicialização. Para forçar:
-```bash
-docker-compose down -v  # Remove volumes
-docker-compose up -d    # Recria tudo
-```
-
-### Problema: Erro de autenticação
-
-**Solução:** Verifique:
-1. Usuário e senha estão corretos
-2. authSource está correto (geralmente `pokeAPI` ou `admin`)
-3. MongoDB está rodando: `docker-compose ps`
-
-### Problema: Interface gráfica não conecta
-
-**Solução:**
-1. Verifique se o MongoDB está acessível: `docker-compose ps`
-2. Teste conexão via mongosh primeiro
-3. Verifique se as dependências estão instaladas: `pip list`
-
-### Problema: Permissão negada inesperadamente
-
-**Solução:**
-1. Verifique as roles do usuário no mongosh:
-   ```javascript
-   use pokeAPI
-   db.getUser("seuUsuario")
-   ```
-2. Verifique os privilégios da role:
-   ```javascript
-   db.getRole("suaRole", {showPrivileges: true})
-   ```
-
-## 📚 Recursos Adicionais
-
-### Documentação Oficial
-
-- [MongoDB Authentication](https://docs.mongodb.com/manual/core/authentication/)
-- [MongoDB Authorization](https://docs.mongodb.com/manual/core/authorization/)
-- [Built-in Roles](https://docs.mongodb.com/manual/reference/built-in-roles/)
-- [Custom Roles](https://docs.mongodb.com/manual/core/security-user-defined-roles/)
-- [Docker Hub - MongoDB](https://hub.docker.com/_/mongo)
-
-### Conceitos Importantes
-
-**Autenticação vs Autorização:**
-- **Autenticação:** Verifica a identidade (quem você é)
-- **Autorização:** Verifica permissões (o que você pode fazer)
-
-**RBAC (Role-Based Access Control):**
-- Controle de acesso baseado em papéis
-- Usuários recebem roles
-- Roles definem permissões granulares
-
-**Privilégios no MongoDB:**
-```javascript
-{
-  resource: { db: "database", collection: "collection" },
-  actions: ["find", "insert", "update", "remove", ...]
-}
-```
-
-## 🎓 Critérios de Avaliação
-
-Este projeto atende aos seguintes critérios:
-
-✅ **Funcionamento Básico:**
-- Autenticação nativa MongoDB funcional
-- Roles customizados criados
-- Usuários com diferentes permissões
-- Ingestão automática de dados
-
-✅ **Robustez:**
-- Validação de permissões em tempo real
-- Tratamento de erros
-- Scripts de inicialização ordenados
-- Healthcheck do Docker
-
-✅ **Criatividade:**
-- Interface gráfica moderna com CustomTkinter
-- Terminal MongoDB interativo
-- Validação visual de permissões
-- Múltiplos cenários de teste
-
-✅ **Documentação:**
-- README completo com exemplos
-- Comentários nos scripts
-- Diagrama de arquitetura
-- Guia de troubleshooting
-
-✅ **Qualidade do Código:**
-- Código organizado e comentado
-- Boas práticas Python
-- Scripts MongoDB bem estruturados
-- Type hints no Python
-
-✅ **Testes e Exemplos:**
-- Múltiplos cenários de teste
-- Demonstração de operações permitidas/negadas
-- Exemplos práticos de uso
-- Validação via interface gráfica
-
-## 👨‍💻 Desenvolvimento
-
-### Adicionar Nova Role
-
-1. Edite `init-db/01-create-roles.js`:
-```javascript
-db.createRole({
-  role: "novaRole",
-  privileges: [
-    {
-      resource: { db: "pokeAPI", collection: "coleção" },
-      actions: ["find", "insert"]
-    }
-  ],
-  roles: []
-});
-```
-
-2. Reinicialize o banco:
-```bash
-docker-compose down -v
-docker-compose up -d
-```
-
-### Adicionar Novo Usuário
-
-1. Edite `init-db/02-create-users.js`:
-```javascript
-db.createUser({
-  user: "novoUsuario",
-  pwd: "senhaForte123",
-  roles: [
-    { role: "novaRole", db: "pokeAPI" }
-  ]
-});
-```
-
-2. Reinicialize o banco
-
-### Adicionar Nova Coleção
-
-1. Edite `init-db/03-create-collections.js`:
-```javascript
-db.createCollection('novaColecao');
-db.novaColecao.insertMany([
-  { campo: "valor1" },
-  { campo: "valor2" }
-]);
-```
-
-## 📝 Licença
-
-Este projeto é para fins educacionais como parte de um trabalho acadêmico sobre Banco de Dados.
-
-## 🤝 Contribuições
-
-Este é um projeto acadêmico. Para sugestões ou melhorias, entre em contato.
+# 🚀 MongoDB - Sistema de Autenticação e Autorização Customizado
+
+Sistema completo de controle de acesso baseado em permissões granulares para MongoDB, com inicialização automática de dados e interface gráfica desktop.
+
+## 📑 Índice
+
+- [Descrição da Arquitetura](#-descrição-da-arquitetura)
+- [Fluxo de Inicialização](#-fluxo-de-inicialização)
+- [Ingestão Automática de Dados](#-ingestão-automática-de-dados)
+- [Instalação e Configuração](#-instalação-e-configuração)
+- [Uso da Aplicação](#-uso-da-aplicação)
+- [Testes de Autenticação e Autorização](#-testes-de-autenticação-e-autorização)
+- [Reset do Ambiente](#-reset-do-ambiente)
+- [Troubleshooting](#-troubleshooting)
 
 ---
 
-**Desenvolvido como parte do curso de Banco de Dados - UFES**
+## 🏗 Descrição da Arquitetura
 
-**Tema:** Autenticação, Autorização e Ingestão Automática no MongoDB
+### Visão Geral
+
+O sistema implementa um modelo de controle de acesso customizado que opera **sobre** a infraestrutura nativa do MongoDB, proporcionando permissões granulares por coleção e operação.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CAMADA DE APLICAÇÃO                       │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │         mongo_client.py (Interface Gráfica)           │  │
+│  │  • Login customizado                                  │  │
+│  │  • Validação de permissões                            │  │
+│  │  • Terminal interativo MongoDB                        │  │
+│  └───────────────────────────────────────────────────────┘  │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ Autenticação customizada
+                       │ (db.users / db.roles)
+┌──────────────────────▼──────────────────────────────────────┐
+│              CAMADA DE CONTROLE DE ACESSO                    │
+│  ┌────────────────────┐      ┌──────────────────────────┐   │
+│  │  Collection: users │      │  Collection: roles       │   │
+│  │  ┌──────────────┐  │      │  ┌────────────────────┐  │   │
+│  │  │ username     │  │      │  │ roleName           │  │   │
+│  │  │ password     │  │      │  │ admin: boolean     │  │   │
+│  │  │ roles: []    │  │      │  │ permissions: [     │  │   │
+│  │  │ active       │  │      │  │   {tableName,      │  │   │
+│  │  └──────────────┘  │      │  │    read, create,   │  │   │
+│  └────────────────────┘      │  │    delete, update} │  │   │
+│                               │  │ ]                  │  │   │
+│                               │  └────────────────────┘  │   │
+│                               └──────────────────────────┘   │
+└──────────────────────┬──────────────────────────────────────┘
+                       │ Infraestrutura
+                       │ (admin/admin)
+┌──────────────────────▼──────────────────────────────────────┐
+│                  CAMADA DE INFRAESTRUTURA                    │
+│  ┌───────────────────────────────────────────────────────┐  │
+│  │           MongoDB Server (Container Docker)           │  │
+│  │  • Autenticação nativa habilitada (--auth)            │  │
+│  │  • Usuário root: admin/admin                          │  │
+│  │  • Banco: pokeAPI                                     │  │
+│  │  • Collections: pokemons, users, roles                │  │
+│  └───────────────────────────────────────────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Componentes Principais
+
+#### 1. **MongoDB Server (Container Docker)**
+- **Imagem**: `mongo:latest`
+- **Autenticação**: Habilitada via `MONGO_INITDB_ROOT_USERNAME` e `MONGO_INITDB_ROOT_PASSWORD`
+- **Porta**: 27017
+- **Banco Principal**: `pokeAPI`
+- **Volume**: `mongo-data` para persistência
+
+#### 2. **Sistema de Permissões Customizado**
+
+**Coleção `roles`:**
+```json
+{
+  "roleName": "pokeReader",
+  "admin": false,
+  "permissions": [
+    {
+      "tableName": "pokemons",
+      "read": true,
+      "create": false,
+      "delete": false,
+      "update": false
+    }
+  ]
+}
+```
+
+**Coleção `users`:**
+```json
+{
+  "username": "viewer",
+  "password": "viewPass123",
+  "roles": ["pokeReader"],
+  "active": true
+}
+```
+
+#### 3. **Aplicação Cliente (mongo_client.py)**
+- **Framework GUI**: CustomTkinter (interface moderna e responsiva)
+- **Driver**: PyMongo
+- **Funcionalidades**:
+  - Login baseado em coleção `users`
+  - Carregamento dinâmico de roles
+  - Validação de permissões antes de cada operação
+  - Terminal interativo com syntax highlighting
+  - Comando `help` integrado
+
+### Princípios de Autorização
+
+O sistema opera sob o modelo de **Privilégio Mínimo** e **True Override**:
+
+1. **Default Deny**: Nenhum usuário possui permissão inerente
+2. **True Override**: Se um usuário possui múltiplas roles, `true` sempre prevalece sobre `false`
+3. **Admin Override**: Usuários com `admin: true` têm acesso pleno a todas as coleções
+4. **Restrição de Metadados**: Apenas admins podem acessar coleções `users` e `roles`
+5. **Expurgo em Drop**: Ao deletar uma coleção, suas permissões são removidas de todas as roles
+
+### Fluxo de Autenticação
+
+```
+┌─────────────┐
+│   Usuário   │
+│   Informa   │
+│ user/senha  │
+└──────┬──────┘
+       │
+       ▼
+┌─────────────────────────────────┐
+│ Aplicação conecta como admin    │
+│ (infraestrutura)                │
+└──────┬──────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────┐
+│ Busca em db.users:              │
+│ {username: "viewer"}            │
+└──────┬──────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────┐
+│ Valida senha                    │
+│ (plaintext em dev, bcrypt prod) │
+└──────┬──────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────┐
+│ Carrega roles do usuário:       │
+│ db.roles.find({roleName: {$in}})│
+└──────┬──────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────┐
+│ Armazena em memória:            │
+│ - user_data                     │
+│ - user_roles_data               │
+│ - is_admin (cache)              │
+└──────┬──────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────┐
+│ Interface principal liberada    │
+└─────────────────────────────────┘
+```
+
+---
+
+## 🔄 Fluxo de Inicialização
+
+### 1. Inicialização do MongoDB via Docker
+
+Quando o container é criado pela primeira vez, o MongoDB executa automaticamente todos os scripts `.js` presentes no diretório `init-db/`, montado em `/docker-entrypoint-initdb.d/`.
+
+```yaml
+# docker-compose.yml
+volumes:
+  - ./init-db:/docker-entrypoint-initdb.d:ro
+```
+
+### 2. Ordem de Execução dos Scripts
+
+Os scripts são executados em **ordem alfabética**:
+
+```
+init-db/
+├── 01-create-roles.js      → Cria sistema de roles customizadas
+├── 02-create-users.js      → Cria usuários com roles atribuídas
+└── 03-create-collections.js → Cria coleções e insere dados iniciais
+```
+
+### 3. Detalhamento de Cada Script
+
+#### **01-create-roles.js**
+```javascript
+// Conecta ao banco pokeAPI
+db = db.getSiblingDB('pokeAPI');
+
+// Cria coleção de roles
+db.createCollection("roles");
+
+// Insere role admin
+db.roles.insertOne({
+  roleName: "admin",
+  admin: true,
+  permissions: []  // Admin tem acesso pleno
+});
+
+// Insere role pokeReader (somente leitura)
+db.roles.insertOne({
+  roleName: "pokeReader",
+  admin: false,
+  permissions: [
+    {
+      tableName: "pokemons",
+      read: true,
+      create: false,
+      delete: false,
+      update: false
+    }
+  ]
+});
+
+// Cria índice único em roleName
+db.roles.createIndex({ roleName: 1 }, { unique: true });
+```
+
+**Resultado:**
+- ✅ 2 roles criadas: `admin` e `pokeReader`
+- ✅ Índice único em `roleName` para evitar duplicatas
+
+#### **02-create-users.js**
+```javascript
+db = db.getSiblingDB('pokeAPI');
+
+// Cria coleção de usuários
+db.createCollection("users");
+
+// Usuário administrador
+db.users.insertOne({
+  username: "admin",
+  password: "admin",
+  roles: ["admin"],
+  active: true
+});
+
+// Usuário com somente leitura
+db.users.insertOne({
+  username: "viewer",
+  password: "viewPass123",
+  roles: ["pokeReader"],
+  active: true
+});
+
+// Índice único em username
+db.users.createIndex({ username: 1 }, { unique: true });
+```
+
+**Resultado:**
+- ✅ 2 usuários criados: `admin` e `viewer`
+- ✅ Índice único em `username`
+
+#### **03-create-collections.js**
+```javascript
+db = db.getSiblingDB('pokeAPI');
+
+// Criar coleção pokemons
+db.createCollection("pokemons");
+
+// Inserir dados de exemplo
+db.pokemons.insertMany([
+  {
+    name: "pikachu",
+    type: "electric",
+    level: 25,
+    moves: ["thunder", "quick-attack"]
+  },
+  {
+    name: "charizard",
+    type: "fire",
+    level: 36,
+    moves: ["flamethrower", "fly"]
+  }
+  // ... mais dados
+]);
+```
+
+**Resultado:**
+- ✅ Coleção `pokemons` criada
+- ✅ Dados iniciais inseridos
+
+### 4. Diagrama de Sequência da Inicialização
+
+```
+docker-compose up
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ MongoDB Container Startup               │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ Cria usuário root (admin/admin)         │
+│ via MONGO_INITDB_ROOT_USERNAME/PASSWORD │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ Executa scripts em init-db/ em ordem:  │
+│ 01-create-roles.js                      │
+│ 02-create-users.js                      │
+│ 03-create-collections.js                │
+└──────┬──────────────────────────────────┘
+       │
+       ▼
+┌─────────────────────────────────────────┐
+│ MongoDB pronto para conexões            │
+│ - Autenticação habilitada               │
+│ - 2 roles criadas                       │
+│ - 2 usuários criados                    │
+│ - Coleção pokemons com dados            │
+└─────────────────────────────────────────┘
+```
+
+---
+
+## 📥 Ingestão Automática de Dados
+
+### Mecanismo do Docker
+
+O MongoDB oficial (`mongo:latest`) possui suporte nativo para inicialização via diretório especial:
+
+```
+/docker-entrypoint-initdb.d/
+```
+
+**Como funciona:**
+1. Na **primeira inicialização** (quando o volume `mongo-data` está vazio)
+2. O MongoDB executa **todos os arquivos** `.sh` e `.js` presentes
+3. Scripts `.js` são executados via `mongosh` com usuário root
+4. Ordem de execução: **alfabética**
+5. Após execução, o MongoDB cria um arquivo de controle para **não reexecutar** nas próximas vezes
+
+### Dados Inseridos
+
+**Coleção `pokemons` (exemplo):**
+```json
+[
+  {
+    "_id": ObjectId("..."),
+    "name": "pikachu",
+    "type": "electric",
+    "level": 25,
+    "moves": ["thunder", "quick-attack"],
+    "stats": {
+      "hp": 35,
+      "attack": 55,
+      "defense": 40
+    }
+  },
+  {
+    "_id": ObjectId("..."),
+    "name": "charizard",
+    "type": "fire",
+    "level": 36,
+    "moves": ["flamethrower", "fly", "slash"],
+    "stats": {
+      "hp": 78,
+      "attack": 84,
+      "defense": 78
+    }
+  }
+]
+```
+
+**Collections criadas automaticamente:**
+- `roles` - Sistema de permissões
+- `users` - Usuários da aplicação
+- `pokemons` - Dados de Pokémons
+
+### Verificação da Ingestão
+
+**Via mongosh:**
+```bash
+# Conectar como admin
+docker exec -it mongo-pokeapi mongosh -u admin -p admin --authenticationDatabase admin
+
+# Verificar banco
+use pokeAPI
+
+# Listar coleções
+show collections
+# Output: pokemons, roles, users
+
+# Contar documentos
+db.pokemons.countDocuments()
+# Output: (número de pokémons inseridos)
+
+db.roles.countDocuments()
+# Output: 2
+
+db.users.countDocuments()
+# Output: 2
+```
+
+---
+
+## 💻 Instalação e Configuração
+
+### Pré-requisitos
+
+- **Docker** e **Docker Compose** instalados
+- **Python 3.11+** (para executar aplicação localmente)
+- **Git** (para clonar o repositório)
+
+### Instalação Rápida
+
+**Windows (PowerShell):**
+```powershell
+# 1. Clonar repositório
+git clone https://github.com/Muril0S4lvador/banco_de_Dados_II.git
+cd mongo
+
+# 2. Subir ambiente completo
+docker-compose up -d
+
+# 3. Aguardar inicialização (15-20 segundos)
+Start-Sleep -Seconds 20
+
+# 4. Verificar logs
+docker-compose logs mongo
+
+# 5. Testar conexão
+docker exec -it mongo-pokeapi mongosh -u admin -p admin --eval "db.version()"
+```
+
+**Linux/Mac:**
+```bash
+# 1. Clonar repositório
+git clone <seu-repositorio>
+cd mongo
+
+# 2. Subir ambiente
+docker-compose up -d
+
+# 3. Aguardar inicialização
+sleep 20
+
+# 4. Verificar status
+docker-compose ps
+
+# 5. Ver logs
+docker-compose logs -f mongo
+```
+
+### Verificar Inicialização Bem-Sucedida
+
+```bash
+# Conectar ao MongoDB
+docker exec -it mongo-pokeapi mongosh -u admin -p admin --authenticationDatabase admin
+
+# No mongosh:
+use pokeAPI
+
+# Verificar roles criadas
+db.roles.find().pretty()
+# Deve mostrar: admin e pokeReader
+
+# Verificar usuários criados
+db.users.find({}, {password: 0}).pretty()
+# Deve mostrar: admin e viewer
+
+# Verificar dados inseridos
+db.pokemons.countDocuments()
+# Deve retornar número > 0
+```
+
+### Executar Aplicação GUI
+
+**Opção 1: Localmente (Recomendado)**
+```powershell
+# Instalar dependências
+pip install -r requirements.txt
+
+# Executar aplicação
+python mongo_client.py
+```
+
+**Opção 2: Via Docker (Requer X11)**
+```bash
+# Ver instruções em DOCKER_GUI.md
+docker-compose --profile client up
+```
+
+---
+
+## 🎮 Uso da Aplicação
+
+### Tela de Login
+
+**Credenciais disponíveis:**
+- **Admin**: `admin` / `admin` (acesso total)
+- **Viewer**: `viewer` / `viewPass123` (somente leitura)
+
+### Comandos Disponíveis
+
+**Ver todos os comandos:**
+```javascript
+help
+```
+
+**Exemplo de comandos:**
+```javascript
+// Listar coleções
+show collections
+
+// Buscar todos os pokémons
+db.pokemons.find()
+
+// Buscar pokémon específico
+db.pokemons.findOne({name: "pikachu"})
+
+// Inserir novo pokémon (requer permissão create)
+db.pokemons.insertOne({name: "bulbasaur", type: "grass", level: 5})
+
+// Atualizar pokémon (requer permissão update)
+db.pokemons.updateOne({name: "pikachu"}, {$set: {level: 50}})
+
+// Deletar pokémon (requer permissão delete)
+db.pokemons.deleteOne({name: "test"})
+
+// Criar coleção (requer admin)
+db.createCollection("trainers")
+
+// Remover coleção (requer admin)
+db.trainers.drop()
+```
+
+---
+
+## 🧪 Testes de Autenticação e Autorização
+
+### Teste 1: Login com Usuário Admin
+
+**Objetivo**: Verificar acesso total ao sistema
+
+**Passos:**
+```
+1. Executar: python mongo_client.py
+2. Login: admin / admin
+3. Verificar header mostra "[ADMIN]"
+4. Digitar: show collections
+   ✅ Deve mostrar: pokemons, roles, users
+
+5. Digitar: db.users.find()
+   ✅ Deve listar todos os usuários
+   
+6. Digitar: db.roles.find()
+   ✅ Deve listar todas as roles
+```
+
+**Resultado Esperado:**
+```
+✓ Login bem-sucedido
+✓ Acesso a todas as coleções
+✓ Permissão para operações administrativas
+```
+
+---
+
+### Teste 2: Login com Usuário Viewer (Somente Leitura)
+
+**Objetivo**: Verificar restrições de permissão
+
+**Passos:**
+```
+1. Logout do admin
+2. Login: viewer / viewPass123
+3. Verificar header mostra "Roles: pokeReader"
+4. Digitar: show collections
+   ✅ Deve mostrar apenas: pokemons
+
+5. Digitar: db.pokemons.find()
+   ✅ Deve retornar lista de pokémons
+   
+6. Digitar: db.pokemons.insertOne({name: "test", type: "fire"})
+   ❌ PERMISSÃO NEGADA: Você não tem permissão 'create' na coleção 'pokemons'
+   
+7. Digitar: db.users.find()
+   ❌ PERMISSÃO NEGADA: Você não tem permissão 'read' na coleção 'users'
+```
+
+**Resultado Esperado:**
+```
+✓ Login bem-sucedido
+✓ Acesso apenas à coleção pokemons
+✓ Operações de leitura permitidas
+✗ Operações de escrita bloqueadas
+✗ Acesso a users/roles bloqueado
+```
+
+---
+
+### Teste 3: Criar Role e Usuário Customizados
+
+**Objetivo**: Testar criação de novas roles e usuários
+
+**Passos (como admin):**
+```javascript
+// 1. Criar nova role
+db.roles.insertOne({
+  roleName: "pokeWriter",
+  admin: false,
+  permissions: [
+    {
+      tableName: "pokemons",
+      read: true,
+      create: true,
+      delete: false,
+      update: true
+    }
+  ]
+})
+// ✅ Role criada com sucesso
+
+// 2. Criar novo usuário
+db.users.insertOne({
+  username: "writer",
+  password: "writerPass123",
+  roles: ["pokeWriter"],
+  active: true
+})
+// ✅ Usuário criado com sucesso
+
+// 3. Verificar criação
+db.roles.findOne({roleName: "pokeWriter"})
+db.users.findOne({username: "writer"})
+```
+
+**Teste do novo usuário:**
+```
+1. Logout do admin
+2. Login: writer / writerPass123
+3. Testar comandos:
+
+db.pokemons.find()
+✅ Permitido (read: true)
+
+db.pokemons.insertOne({name: "squirtle", type: "water"})
+✅ Permitido (create: true)
+
+db.pokemons.updateOne({name: "squirtle"}, {$set: {level: 10}})
+✅ Permitido (update: true)
+
+db.pokemons.deleteOne({name: "squirtle"})
+❌ PERMISSÃO NEGADA (delete: false)
+```
+
+---
+
+### Teste 4: True Override (Múltiplas Roles)
+
+**Objetivo**: Verificar comportamento de True Override
+
+**Cenário:**
+```javascript
+// Usuário com 2 roles
+db.users.insertOne({
+  username: "multi",
+  password: "multi123",
+  roles: ["restrictedReader", "pokeWriter"],
+  active: true
+})
+
+// restrictedReader: read=true, create=false, update=false, delete=false
+// pokeWriter: read=true, create=true, update=true, delete=false
+```
+
+**Comportamento esperado:**
+```
+Permissões finais (True Override):
+- read: true (ambas têm true)
+- create: true (pokeWriter tem true)
+- update: true (pokeWriter tem true)
+- delete: false (ambas têm false)
+```
+
+**Teste:**
+```javascript
+db.pokemons.insertOne({name: "test"})
+✅ Permitido (pelo menos uma role tem create: true)
+
+db.pokemons.updateOne({name: "test"}, {$set: {level: 1}})
+✅ Permitido (True Override)
+
+db.pokemons.deleteOne({name: "test"})
+❌ PERMISSÃO NEGADA (nenhuma role tem delete: true)
+```
+
+---
+
+### Teste 5: Expurgo em Drop
+
+**Objetivo**: Verificar remoção automática de permissões ao deletar coleção
+
+**Passos (como admin):**
+```javascript
+// 1. Criar coleção de teste
+db.createCollection("testCollection")
+
+// 2. Adicionar permissão em uma role
+db.roles.updateOne(
+  {roleName: "pokeReader"},
+  {$push: {permissions: {
+    tableName: "testCollection",
+    read: true,
+    create: false,
+    delete: false,
+    update: false
+  }}}
+)
+
+// 3. Verificar permissão adicionada
+db.roles.findOne({roleName: "pokeReader"})
+// ✅ permissions agora contém testCollection
+
+// 4. Deletar a coleção
+db.testCollection.drop()
+
+// 5. Verificar permissão removida automaticamente
+db.roles.findOne({roleName: "pokeReader"})
+// ✅ permissions NÃO contém mais testCollection (Expurgo automático)
+```
+
+**Resultado:**
+```
+✓ Coleção deletada
+✓ Permissões removidas automaticamente de TODAS as roles
+✓ Sistema mantém integridade (sem permissões órfãs)
+```
+
+---
+
+### Teste 6: Via MongoDB Shell (mongosh)
+
+**Teste direto no MongoDB:**
+
+```bash
+# Terminal 1: Conectar como admin
+docker exec -it mongo-pokeapi mongosh -u admin -p admin --authenticationDatabase admin
+
+use pokeAPI
+
+# Listar todas as coleções (admin pode ver tudo)
+show collections
+# Output: pokemons, roles, users
+
+# Ver roles
+db.roles.find().pretty()
+
+# Ver usuários (sem senhas)
+db.users.find({}, {password: 0}).pretty()
+
+# Buscar pokémons
+db.pokemons.find().limit(3).pretty()
+
+# Estatísticas
+db.pokemons.countDocuments()
+```
+
+---
+
+## 🔄 Reset do Ambiente
+
+### Reset Completo (Limpar Tudo)
+
+**Windows (PowerShell):**
+```powershell
+# 1. Parar e remover containers + volumes
+docker-compose down -v
+
+# 2. Verificar que volumes foram removidos
+docker volume ls | Select-String "mongo"
+
+# 3. Subir novamente (scripts de init executam)
+docker-compose up -d
+
+# 4. Aguardar inicialização
+Start-Sleep -Seconds 20
+
+# 5. Verificar logs
+docker-compose logs mongo | Select-String "init process complete"
+```
+
+**Linux/Mac:**
+```bash
+# Reset completo
+docker-compose down -v
+
+# Verificar volumes removidos
+docker volume ls | grep mongo
+
+# Subir novamente
+docker-compose up -d
+
+# Aguardar
+sleep 20
+
+# Verificar
+docker-compose logs mongo | grep "init"
+```
+
+### Reset Parcial (Manter Volumes)
+
+```bash
+# Apenas reiniciar containers (mantém dados)
+docker-compose restart
+
+# Ou parar e iniciar
+docker-compose stop
+docker-compose start
+```
+
+### Verificar Reset Bem-Sucedido
+
+```bash
+docker exec -it mongo-pokeapi mongosh -u admin -p admin --authenticationDatabase admin
+
+use pokeAPI
+
+# Verificar coleções
+show collections
+
+# Contar documentos
+db.roles.countDocuments()   # Deve ser 2
+db.users.countDocuments()   # Deve ser 2
+db.pokemons.countDocuments() # Deve ter dados iniciais
+```
+
+### Remover Apenas Dados de Aplicação (Preservar Schema)
+
+```javascript
+// Como admin
+use pokeAPI
+
+// Limpar pokemons mas manter users/roles
+db.pokemons.deleteMany({})
+
+// Reinserir dados iniciais
+db.pokemons.insertMany([
+  {name: "pikachu", type: "electric", level: 25},
+  {name: "charizard", type: "fire", level: 36}
+])
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Problema: "não consigo criar coleção"
+
+**Sintoma:**
+```
+❌ PERMISSÃO NEGADA: Comandos administrativos de banco requerem permissão admin
+```
+
+**Causa:** Usuário não possui flag `admin: true`
+
+**Solução:**
+```javascript
+// Como admin, verificar role do usuário
+db.users.findOne({username: "seu-usuario"})
+
+// Se necessário, adicionar role admin
+db.users.updateOne(
+  {username: "seu-usuario"},
+  {$push: {roles: "admin"}}
+)
+```
+
+---
+
+### Problema: "Erro ao executar operação: document must be an instance of dict"
+
+**Sintoma:**
+```javascript
+db.users.insertOne({..., createdAt: new Date()})
+❌ Erro: document must be an instance of dict
+```
+
+**Causa:** `new Date()` é JavaScript, não funciona no Python client
+
+**Solução:**
+```javascript
+// Remover new Date()
+db.users.insertOne({
+  username: "test",
+  password: "123",
+  roles: ["pokeReader"],
+  active: true
+})
+```
+
+---
+
+### Problema: "Connection refused" ao acessar MongoDB
+
+**Sintoma:**
+```
+❌ Não foi possível conectar ao MongoDB
+```
+
+**Verificações:**
+```powershell
+# 1. Container está rodando?
+docker-compose ps
+
+# 2. Porta 27017 está aberta?
+netstat -an | Select-String "27017"
+
+# 3. Logs mostram erros?
+docker-compose logs mongo
+
+# 4. Healthcheck está OK?
+docker inspect mongo-pokeapi | Select-String "Health"
+```
+
+**Solução:**
+```powershell
+# Restart completo
+docker-compose restart mongo
+
+# Ou rebuild
+docker-compose down
+docker-compose up -d
+```
+
+---
+
+### Problema: Scripts de inicialização não executaram
+
+**Sintoma:** Coleções `users` e `roles` não existem
+
+**Causa:** Volume já existia (scripts só rodam na primeira vez)
+
+**Solução:**
+```powershell
+# ATENÇÃO: Isso apaga TODOS os dados!
+docker-compose down -v
+docker-compose up -d
+```
+
+---
+
+### Problema: "duplicate key error" ao criar usuário/role
+
+**Sintoma:**
+```
+E11000 duplicate key error collection: pokeAPI.users index: username_1
+```
+
+**Causa:** Usuário/role já existe
+
+**Solução:**
+```javascript
+// Verificar se existe
+db.users.findOne({username: "nome"})
+
+// Se existir, atualizar ao invés de inserir
+db.users.updateOne(
+  {username: "nome"},
+  {$set: {password: "nova-senha"}},
+  {upsert: true}
+)
+```
+
+---
+
+
+## 📚 Referências
+
+### Documentação Oficial
+- [MongoDB Authentication](https://docs.mongodb.com/manual/core/authentication/)
+- [MongoDB Authorization](https://docs.mongodb.com/manual/core/authorization/)
+- [Docker MongoDB Image](https://hub.docker.com/_/mongo)
+
+### Arquivos do Projeto
+- [PERMISSION.md](PERMISSION.md) - Especificação completa do sistema de permissões
+- [COMANDOS.md](COMANDOS.md) - Referência rápida de comandos
+
+---
+
+## 👥 Usuários Padrão
+
+| Usuário | Senha | Roles | Permissões |
+|---------|-------|-------|------------|
+| `admin` | `admin` | admin | Acesso total ao sistema |
+| `viewer` | `viewPass123` | pokeReader | Somente leitura em pokemons |
+
+---
+
+## 🔐 Notas de Segurança
+
+⚠️ **IMPORTANTE**: Este projeto usa senhas em texto plano para fins de **demonstração e desenvolvimento**.
+
+---
+
+## 📄 Licença
+
+Este projeto é fornecido como material educacional para o curso de Banco de Dados.
+
+---
+
+## 🤝 Contribuindo
+
+Contribuições são bem-vindas! Por favor:
+1. Fork o repositório
+2. Crie uma branch para sua feature
+3. Commit suas mudanças
+4. Push para a branch
+5. Abra um Pull Request
+
+---
+
+**Desenvolvido com 💙 para aprendizado de MongoDB e Sistemas de Permissões**

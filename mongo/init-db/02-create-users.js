@@ -61,54 +61,6 @@ print('  - Roles: [pokeReader]');
 print('  - Permissões: Somente leitura em pokemons');
 
 // ========================================
-// Usuário 3: dataEntry
-// Roles: [pokeWriter]
-// Descrição: Usuário para entrada de dados (sem permissão de deletar)
-// ========================================
-db.users.insertOne({
-  username: "dataEntry",
-  password: "entryPass123",
-  roles: ["pokeWriter"],
-  active: true,
-  createdAt: new Date()
-});
-print('✓ Usuário "dataEntry" criado com sucesso');
-print('  - Roles: [pokeWriter]');
-print('  - Permissões: Leitura, inserção e atualização (sem remoção)');
-
-// ========================================
-// Usuário 4: analyst
-// Roles: [pokeAnalyst]
-// Descrição: Analista de dados com acesso de leitura
-// ========================================
-db.users.insertOne({
-  username: "analyst",
-  password: "analystPass123",
-  roles: ["pokeAnalyst"],
-  active: true,
-  createdAt: new Date()
-});
-print('✓ Usuário "analyst" criado com sucesso');
-print('  - Roles: [pokeAnalyst]');
-print('  - Permissões: Leitura em pokemons');
-
-// ========================================
-// Usuário 5: restrictedUser
-// Roles: [pokemonsOnlyReader]
-// Descrição: Usuário com acesso restrito apenas à coleção pokemons
-// ========================================
-db.users.insertOne({
-  username: "restrictedUser",
-  password: "restrictPass123",
-  roles: ["pokemonsOnlyReader"],
-  active: true,
-  createdAt: new Date()
-});
-print('✓ Usuário "restrictedUser" criado com sucesso');
-print('  - Roles: [pokemonsOnlyReader]');
-print('  - Permissões: Leitura APENAS na coleção pokemons');
-
-// ========================================
 // 3. Criar índice único no username para evitar duplicatas
 // ========================================
 try {
@@ -138,12 +90,6 @@ print('ADMIN: admin / admin - Acesso total ao sistema');
 print('========================================');
 print('USUÁRIOS DA APLICAÇÃO:');
 print('1. viewer / viewPass123 - Somente leitura');
-print('2. dataEntry / entryPass123 - Inserção e atualização');
-print('3. analyst / analystPass123 - Leitura');
-print('4. restrictedUser / restrictPass123 - Leitura apenas na coleção pokemons');
-print('========================================');
-print('⚠ IMPORTANTE: Senhas em texto plano apenas para desenvolvimento!');
-print('⚠ Em produção, use hash bcrypt e variáveis de ambiente!');
 print('========================================');
 print('Total de usuários: ' + db.users.countDocuments());
 print('========================================\n');
