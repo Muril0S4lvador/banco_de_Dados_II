@@ -64,7 +64,7 @@ Admin executando comandos de criação de coleções.
 ![Criar Coleção](public/9-createCollections.png)
 
 ### Privilégios Administrativos
-Demonstração de acesso total do admin.
+Demonstração de acesso total do admin (Visão de usuário não admin).
 
 ![Permissão Admin](public/10-permissao-admin.png)
 
