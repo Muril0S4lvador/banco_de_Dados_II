@@ -497,6 +497,57 @@ class MongoDBClientApp:
             textbox.insert("1.0", f"❌ Erro ao listar coleções: {str(e)}")
             textbox.configure(state="disabled")
     
+    def split_arguments(self, args_str: str) -> List[str]:
+        """
+        Divide a string de argumentos por vírgula, respeitando chaves e colchetes.
+        Exemplo: "{a:1}, {b:2}" -> ["{a:1}", "{b:2}"]
+        """
+        if not args_str:
+            return []
+        
+        args = []
+        current_arg = []
+        depth = 0
+        in_string = False
+        string_char = None
+        
+        for i, char in enumerate(args_str):
+            # Gerenciar strings
+            if char in ['"', "'"] and (i == 0 or args_str[i-1] != '\\'):
+                if not in_string:
+                    in_string = True
+                    string_char = char
+                elif char == string_char:
+                    in_string = False
+                    string_char = None
+            
+            # Se estiver dentro de string, adicionar o caractere sem processar
+            if in_string:
+                current_arg.append(char)
+                continue
+            
+            # Gerenciar profundidade de chaves/colchetes
+            if char in ['{', '[']:
+                depth += 1
+            elif char in ['}', ']']:
+                depth -= 1
+            
+            # Separar por vírgula apenas no nível superior
+            if char == ',' and depth == 0:
+                arg = ''.join(current_arg).strip()
+                if arg:
+                    args.append(arg)
+                current_arg = []
+            else:
+                current_arg.append(char)
+        
+        # Adicionar último argumento
+        arg = ''.join(current_arg).strip()
+        if arg:
+            args.append(arg)
+        
+        return args
+    
     def parse_command(self, command: str) -> Optional[Dict[str, Any]]:
         """
         Faz o parsing do comando MongoDB.
@@ -528,19 +579,40 @@ class MongoDBClientApp:
             # Parsear argumentos
             args = None
             if args_str:
-                try:
-                    # Normalizar JSON MongoDB para JSON válido
-                    args_str_normalized = self.normalize_mongodb_json(args_str)
-                    # Tentar parsear como JSON
-                    args = json.loads(args_str_normalized)
-                except json.JSONDecodeError:
-                    # Se não for JSON, pode ser uma string simples entre aspas
-                    if args_str.startswith('"') and args_str.endswith('"'):
-                        args = args_str.strip('"')
-                    elif args_str.startswith("'") and args_str.endswith("'"):
-                        args = args_str.strip("'")
-                    else:
-                        args = args_str
+                # Separar múltiplos argumentos
+                arg_list = self.split_arguments(args_str)
+                
+                if len(arg_list) == 0:
+                    args = None
+                elif len(arg_list) == 1:
+                    # Um único argumento
+                    try:
+                        args_str_normalized = self.normalize_mongodb_json(arg_list[0])
+                        args = json.loads(args_str_normalized)
+                    except json.JSONDecodeError:
+                        # Se não for JSON, pode ser uma string simples entre aspas
+                        if arg_list[0].startswith('"') and arg_list[0].endswith('"'):
+                            args = arg_list[0].strip('"')
+                        elif arg_list[0].startswith("'") and arg_list[0].endswith("'"):
+                            args = arg_list[0].strip("'")
+                        else:
+                            args = arg_list[0]
+                else:
+                    # Múltiplos argumentos - parsear cada um
+                    parsed_args = []
+                    for arg in arg_list:
+                        try:
+                            arg_normalized = self.normalize_mongodb_json(arg)
+                            parsed_args.append(json.loads(arg_normalized))
+                        except json.JSONDecodeError:
+                            # String simples
+                            if arg.startswith('"') and arg.endswith('"'):
+                                parsed_args.append(arg.strip('"'))
+                            elif arg.startswith("'") and arg.endswith("'"):
+                                parsed_args.append(arg.strip("'"))
+                            else:
+                                parsed_args.append(arg)
+                    args = parsed_args
             
             return {
                 'collection': None,  # Comandos de banco não têm coleção específica
@@ -563,12 +635,28 @@ class MongoDBClientApp:
         # Parsear argumentos
         args = None
         if args_str:
-            try:
-                # Normalizar JSON MongoDB para JSON válido
-                args_str_normalized = self.normalize_mongodb_json(args_str)
-                args = json.loads(args_str_normalized)
-            except json.JSONDecodeError:
-                args = args_str
+            # Separar múltiplos argumentos
+            arg_list = self.split_arguments(args_str)
+            
+            if len(arg_list) == 0:
+                args = None
+            elif len(arg_list) == 1:
+                # Um único argumento
+                try:
+                    args_str_normalized = self.normalize_mongodb_json(arg_list[0])
+                    args = json.loads(args_str_normalized)
+                except json.JSONDecodeError:
+                    args = arg_list[0]
+            else:
+                # Múltiplos argumentos - parsear cada um
+                parsed_args = []
+                for arg in arg_list:
+                    try:
+                        arg_normalized = self.normalize_mongodb_json(arg)
+                        parsed_args.append(json.loads(arg_normalized))
+                    except json.JSONDecodeError:
+                        parsed_args.append(arg)
+                args = parsed_args
         
         return {
             'collection': collection,
@@ -579,8 +667,9 @@ class MongoDBClientApp:
     
     def normalize_mongodb_json(self, json_str: str) -> str:
         """Normaliza JSON do MongoDB para JSON válido."""
-        # Adicionar aspas em chaves sem aspas
-        json_str = re.sub(r'(\w+):', r'"\1":', json_str)
+        # Adicionar aspas em chaves sem aspas (incluindo operadores $ do MongoDB)
+        # Suporta chaves como: name, $set, $push, _id, etc.
+        json_str = re.sub(r'([\$\w]+):', r'"\1":', json_str)
         return json_str
     
     def execute_command(self):
@@ -777,6 +866,14 @@ class MongoDBClientApp:
                 filter_doc = args if args else {}
                 res = coll.delete_many(filter_doc)
                 result = f"✓ Documentos deletados: {res.deleted_count}"
+            
+            elif operation == 'findOneAndDelete':
+                filter_doc = args if args else {}
+                doc = coll.find_one_and_delete(filter_doc)
+                if doc:
+                    result = f"✓ Documento deletado:\n{json.dumps(doc, indent=2, default=str)}"
+                else:
+                    result = "Nenhum documento encontrado para deletar"
             
             # Operações administrativas
             elif operation == 'drop':

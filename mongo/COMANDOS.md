@@ -36,7 +36,7 @@ db.pokemons.distinct("type")
 ### C. Update (Atualização)
 
 ```javascript
-db.pokemons.updateOne({name: "pikachu"}, {$set: {level: 50}})
+db.pokemons.updateOne({name: "PokemonTesteAdd"}, {$set: {level: 50}})
 db.pokemons.updateMany({type: "fire"}, {$set: {category: "fire-type"}})
 db.pokemons.replaceOne({name: "pikachu"}, {name: "pikachu", type: "electric", level: 100, evolved: true})
 ```
@@ -44,7 +44,7 @@ db.pokemons.replaceOne({name: "pikachu"}, {name: "pikachu", type: "electric", le
 ### D. Delete (Remoção)
 
 ```javascript
-db.pokemons.deleteOne({name: "test-pokemon"})
+db.pokemons.deleteOne({name: "PokemonTesteAdd"})
 db.pokemons.deleteMany({level: {$lt: 5}})
 db.pokemons.findOneAndDelete({name: "temporary"})
 ```

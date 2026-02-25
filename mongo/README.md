@@ -4,6 +4,7 @@ Sistema completo de controle de acesso baseado em permissões granulares para Mo
 
 ## 📑 Índice
 
+- [Demonstração Visual](#-demonstração-visual)
 - [Descrição da Arquitetura](#-descrição-da-arquitetura)
 - [Fluxo de Inicialização](#-fluxo-de-inicialização)
 - [Ingestão Automática de Dados](#-ingestão-automática-de-dados)
@@ -12,6 +13,60 @@ Sistema completo de controle de acesso baseado em permissões granulares para Mo
 - [Testes de Autenticação e Autorização](#-testes-de-autenticação-e-autorização)
 - [Reset do Ambiente](#-reset-do-ambiente)
 - [Troubleshooting](#-troubleshooting)
+
+---
+
+## 📸 Demonstração Visual
+
+### Tela de Login
+Interface de autenticação com validação de credenciais customizada.
+
+![Tela de Login](public/1-login.png)
+
+### Interface do Administrador
+Painel administrativo com acesso completo a todas as funcionalidades.
+
+![Home do Admin](public/2-admin-home.png)
+
+### Gerenciamento de Roles
+Visualização e consulta de roles e suas permissões.
+
+![Consulta de Roles](public/3-admin-fins-roles.png)
+
+### Criação de Usuários
+Admin criando novos usuários com roles específicas.
+
+![Criação de Usuário](public/4-criacao-usuario.png)
+
+### Interface de Usuário com Permissões Limitadas
+Tela inicial de um usuário não-admin com permissões restritas.
+
+![Home do Usuário](public/5-user-home.png)
+
+### Operações de Leitura e Inserção
+Usuário executando comandos permitidos pelas suas roles.
+
+![Select e Insert](public/6-user-select-insert.png)
+
+### Operações de Atualização
+Execução de comandos de update com as permissões concedidas.
+
+![Update de Usuário](public/7-update-usuario.png)
+
+### Controle de Permissões
+Sistema bloqueando operação não autorizada.
+
+![Permissão Negada](public/8-permissao-negada.png)
+
+### Operações Administrativas
+Admin executando comandos de criação de coleções.
+
+![Criar Coleção](public/9-createCollections.png)
+
+### Privilégios Administrativos
+Demonstração de acesso total do admin.
+
+![Permissão Admin](public/10-permissao-admin.png)
 
 ---
 
